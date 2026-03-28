@@ -41,6 +41,27 @@ export default function Auth() {
 
   const [forgotEmail, setForgotEmail] = useState("");
 
+  // Check network connectivity
+  const checkNetworkStatus = () => {
+    if (!navigator.onLine) {
+      return "You are offline. Please check your internet connection.";
+    }
+    return null;
+  };
+
+  const handleNetworkError = (error: unknown) => {
+    const err = error as any;
+    const errorMsg = err?.message || String(err);
+
+    if (errorMsg.includes("Failed to fetch") || errorMsg.includes("ERR_NAME_NOT_RESOLVED")) {
+      return "Network error: Can't reach authentication server. Check your internet connection or try a different WiFi/network.";
+    }
+    if (errorMsg.includes("timeout")) {
+      return "Request timed out. Network is slow - try again.";
+    }
+    return errorMsg;
+  };
+
   useEffect(() => {
     if (isAuthenticated) navigate("/dashboard", { replace: true });
   }, [isAuthenticated, navigate]);
@@ -61,23 +82,31 @@ export default function Auth() {
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (loading) return; // Prevent multiple submissions
-    
+    if (loading) return;
+
+    const netError = checkNetworkStatus();
+    if (netError) {
+      toast({ title: "Network Issue", description: netError, variant: "destructive" });
+      return;
+    }
+
     if (!loginEmail || !loginPassword) {
       toast({ title: "Error", description: "Email and password required", variant: "destructive" });
       return;
     }
-    
+
     setLoading(true);
     try {
       const result = await signIn(loginEmail, loginPassword);
       if (result.error) {
-        toast({ title: "Login Failed", description: result.error, variant: "destructive" });
+        const errMsg = handleNetworkError(result.error);
+        toast({ title: "Login Failed", description: errMsg, variant: "destructive" });
       } else {
         toast({ title: "Login Successful!", description: "Redirecting to dashboard..." });
       }
     } catch (err) {
-      toast({ title: "Error", description: "An unexpected error occurred", variant: "destructive" });
+      const errMsg = handleNetworkError(err);
+      toast({ title: "Error", description: errMsg, variant: "destructive" });
     } finally {
       setLoading(false);
     }
@@ -85,8 +114,14 @@ export default function Auth() {
 
   const handleSignup = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (loading) return; // Prevent multiple submissions
-    
+    if (loading) return;
+
+    const netError = checkNetworkStatus();
+    if (netError) {
+      toast({ title: "Network Issue", description: netError, variant: "destructive" });
+      return;
+    }
+
     if (signupStep === 1) {
       if (!signupEmail || !fullName || !signupPassword) {
         toast({ title: "Error", description: "Please fill all required fields", variant: "destructive" });
@@ -103,7 +138,7 @@ export default function Auth() {
       setSignupStep(2);
       return;
     }
-    
+
     setLoading(true);
     try {
       const result = await signUp(signupEmail, signupPassword, fullName, {
@@ -115,17 +150,18 @@ export default function Auth() {
         farm_size: farmSize ? Number(farmSize) : null,
       });
       if (result.error) {
-        toast({ title: "Signup Failed", description: result.error, variant: "destructive" });
+        const errMsg = handleNetworkError(result.error);
+        toast({ title: "Signup Failed", description: errMsg, variant: "destructive" });
       } else {
         toast({ title: "Success!", description: result.message || "Account created successfully!" });
-        // Auto-switch to login after successful signup
         setTimeout(() => {
           setMode("login");
           setSignupStep(1);
         }, 1500);
       }
     } catch (err) {
-      toast({ title: "Error", description: "An unexpected error occurred", variant: "destructive" });
+      const errMsg = handleNetworkError(err);
+      toast({ title: "Error", description: errMsg, variant: "destructive" });
     } finally {
       setLoading(false);
     }
@@ -133,24 +169,32 @@ export default function Auth() {
 
   const handleForgotPassword = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (loading) return; // Prevent multiple submissions
-    
+    if (loading) return;
+
+    const netError = checkNetworkStatus();
+    if (netError) {
+      toast({ title: "Network Issue", description: netError, variant: "destructive" });
+      return;
+    }
+
     if (!forgotEmail) {
       toast({ title: "Error", description: "Please enter your email", variant: "destructive" });
       return;
     }
-    
+
     setLoading(true);
     try {
       const result = await resetPassword(forgotEmail);
       if (result.error) {
-        toast({ title: "Reset failed", description: result.error, variant: "destructive" });
+        const errMsg = handleNetworkError(result.error);
+        toast({ title: "Reset failed", description: errMsg, variant: "destructive" });
         return;
       }
       toast({ title: "Success!", description: "Reset link sent to your email. Check inbox and spam folder." });
       setMode("login");
     } catch (err) {
-      toast({ title: "Error", description: "An unexpected error occurred", variant: "destructive" });
+      const errMsg = handleNetworkError(err);
+      toast({ title: "Error", description: errMsg, variant: "destructive" });
     } finally {
       setLoading(false);
     }
