@@ -94,16 +94,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, [getFallbackName]);
 
   const mapUser = useCallback(async (authUser: AuthUserLike) => {
-    // Try to get profile but with a VERY short timeout to avoid UI hangs
+    // Try to get profile with fallback to avoid UI hangs
     try {
-      const { data: profile, error } = await withTimeout(
-        supabase
-          .from("profiles")
-          .select("full_name")
-          .eq("user_id", authUser.id)
-          .maybeSingle(),
-        2500 // Only wait 2.5s for profile data
-      );
+      const { data: profile, error } = await supabase
+        .from("profiles")
+        .select("full_name")
+        .eq("user_id", authUser.id)
+        .maybeSingle();
 
       if (error || !profile) {
         return mapAuthUserFallback(authUser);
@@ -115,10 +112,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         full_name: profile?.full_name || getFallbackName(authUser),
       } satisfies AppUser;
     } catch {
-      // Fallback to internal metadata if DB query fails/times out
+      // Fallback to internal metadata if DB query fails
       return mapAuthUserFallback(authUser);
     }
-  }, [getFallbackName, mapAuthUserFallback, withTimeout]);
+  }, [getFallbackName, mapAuthUserFallback]);
 
   useEffect(() => {
     let mounted = true;
