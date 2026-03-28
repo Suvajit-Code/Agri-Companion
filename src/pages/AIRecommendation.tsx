@@ -9,6 +9,8 @@ import {
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { supabase } from "@/integrations/supabase/client";
+import { useToast } from "@/hooks/use-toast";
 
 // ── Types ──
 interface FormData {
@@ -47,6 +49,28 @@ const defaultForm: FormData = {
   riskAppetite: 50,
 };
 
+
+// ── CropResult Type ──
+interface CropResult {
+  name: string;
+  nameHi: string;
+  emoji: string;
+  score: number;
+  yield: string;
+  price: string;
+  duration: string;
+  water: string;
+  roi: string;
+  investment: string;
+  revenue: string;
+  profit: string;
+  desc: string;
+  tags: string[];
+  monthlyTimeline: { month: string; activity: string; status: string }[];
+  pestRisks: { name: string; risk: string; solution: string }[];
+  fertilizerPlan: { stage: string; fertilizer: string; timing: string }[];
+}
+
 // ── Step data ──
 const soilTypes = [
   { id: "alluvial", label: "Alluvial", emoji: "🏞️", desc: "Rich & fertile" },
@@ -79,126 +103,7 @@ const seasons = [
 ];
 
 // ── Enhanced Results data ──
-const cropResults = [
-  {
-    name: "Soybean", nameHi: "सोयाबीन", emoji: "🫘", score: 94,
-    yield: "18-22 quintal/acre", price: "₹4,200–₹5,100/quintal",
-    duration: "90-110 days", water: "Moderate", roi: "145%",
-    investment: "₹12,000/acre", revenue: "₹85,000/acre", profit: "₹73,000/acre",
-    desc: "Excellent nitrogen fixer, high demand in oil industry. Ideal for your soil and climate conditions.",
-    tags: ["High Demand", "Export Ready", "MSP Support"],
-    monthlyTimeline: [
-      { month: "Nov", activity: "Land Prep & Sowing", status: "start" },
-      { month: "Dec", activity: "Germination & Growth", status: "grow" },
-      { month: "Jan", activity: "Flowering Stage", status: "flower" },
-      { month: "Feb", activity: "Pod Formation", status: "fruit" },
-      { month: "Mar", activity: "Harvest Ready", status: "harvest" },
-    ],
-    pestRisks: [
-      { name: "Stem Fly", risk: "Medium", solution: "Neem-based spray at 30 DAS" },
-      { name: "Girdle Beetle", risk: "Low", solution: "Seed treatment with Thiamethoxam" },
-    ],
-    fertilizerPlan: [
-      { stage: "Basal", fertilizer: "DAP 50kg/acre", timing: "At sowing" },
-      { stage: "Top dress", fertilizer: "Urea 25kg/acre", timing: "30 DAS" },
-      { stage: "Foliar", fertilizer: "NPK 19:19:19", timing: "45 DAS" },
-    ],
-  },
-  {
-    name: "Wheat", nameHi: "गेहूँ", emoji: "🌾", score: 89,
-    yield: "20-25 quintal/acre", price: "₹2,275–₹2,800/quintal",
-    duration: "120-150 days", water: "Moderate", roi: "128%",
-    investment: "₹15,000/acre", revenue: "₹62,000/acre", profit: "₹47,000/acre",
-    desc: "Staple crop with guaranteed MSP support. Highly suitable for Rabi season in your region.",
-    tags: ["MSP Guaranteed", "Staple Crop", "Low Risk"],
-    monthlyTimeline: [
-      { month: "Nov", activity: "Sowing", status: "start" },
-      { month: "Dec", activity: "Tillering", status: "grow" },
-      { month: "Jan", activity: "Jointing", status: "grow" },
-      { month: "Feb", activity: "Heading", status: "flower" },
-      { month: "Mar", activity: "Harvest", status: "harvest" },
-    ],
-    pestRisks: [
-      { name: "Yellow Rust", risk: "High", solution: "Propiconazole spray" },
-      { name: "Aphid", risk: "Medium", solution: "Dimethoate 30 EC" },
-    ],
-    fertilizerPlan: [
-      { stage: "Basal", fertilizer: "DAP 50kg/acre + MOP 25kg", timing: "At sowing" },
-      { stage: "1st Top dress", fertilizer: "Urea 35kg/acre", timing: "21 DAS" },
-      { stage: "2nd Top dress", fertilizer: "Urea 35kg/acre", timing: "45 DAS" },
-    ],
-  },
-  {
-    name: "Mustard", nameHi: "सरसों", emoji: "🌻", score: 85,
-    yield: "8-12 quintal/acre", price: "₹5,050–₹6,200/quintal",
-    duration: "110-140 days", water: "Low", roi: "135%",
-    investment: "₹8,000/acre", revenue: "₹56,000/acre", profit: "₹48,000/acre",
-    desc: "Low water requirement, high market value. Great intercropping companion for wheat.",
-    tags: ["Drought Tolerant", "High Value", "Intercrop"],
-    monthlyTimeline: [
-      { month: "Oct", activity: "Sowing", status: "start" },
-      { month: "Nov", activity: "Vegetative", status: "grow" },
-      { month: "Dec", activity: "Flowering", status: "flower" },
-      { month: "Jan", activity: "Siliqua Formation", status: "fruit" },
-      { month: "Feb", activity: "Harvest", status: "harvest" },
-    ],
-    pestRisks: [
-      { name: "Aphid", risk: "High", solution: "Imidacloprid 17.8 SL" },
-      { name: "White Rust", risk: "Medium", solution: "Mancozeb spray" },
-    ],
-    fertilizerPlan: [
-      { stage: "Basal", fertilizer: "DAP 35kg/acre", timing: "At sowing" },
-      { stage: "Top dress", fertilizer: "Urea 20kg/acre", timing: "30 DAS" },
-    ],
-  },
-  {
-    name: "Chickpea", nameHi: "चना", emoji: "🫛", score: 82,
-    yield: "10-14 quintal/acre", price: "₹5,230–₹6,500/quintal",
-    duration: "95-110 days", water: "Low", roi: "122%",
-    investment: "₹10,000/acre", revenue: "₹72,000/acre", profit: "₹62,000/acre",
-    desc: "Drought-tolerant pulse with excellent protein demand. Improves soil nitrogen content.",
-    tags: ["Protein Rich", "Soil Builder", "Export"],
-    monthlyTimeline: [
-      { month: "Oct", activity: "Sowing", status: "start" },
-      { month: "Nov", activity: "Branching", status: "grow" },
-      { month: "Dec", activity: "Flowering", status: "flower" },
-      { month: "Jan", activity: "Pod Fill", status: "fruit" },
-      { month: "Feb", activity: "Harvest", status: "harvest" },
-    ],
-    pestRisks: [
-      { name: "Pod Borer", risk: "High", solution: "HaNPV + Neem oil" },
-      { name: "Wilt", risk: "Medium", solution: "Resistant varieties + Trichoderma" },
-    ],
-    fertilizerPlan: [
-      { stage: "Basal", fertilizer: "DAP 25kg/acre", timing: "At sowing" },
-      { stage: "Bio", fertilizer: "Rhizobium inoculant", timing: "Seed treatment" },
-    ],
-  },
-  {
-    name: "Tomato", nameHi: "टमाटर", emoji: "🍅", score: 78,
-    yield: "200-300 quintal/acre", price: "₹800–₹3,500/quintal",
-    duration: "60-90 days", water: "High", roi: "180%",
-    investment: "₹35,000/acre", revenue: "₹280,000/acre", profit: "₹245,000/acre",
-    desc: "High-yield cash crop with volatile but potentially very high returns. Needs cold storage.",
-    tags: ["Cash Crop", "High Return", "Volatile"],
-    monthlyTimeline: [
-      { month: "Nov", activity: "Transplant", status: "start" },
-      { month: "Dec", activity: "Vegetative", status: "grow" },
-      { month: "Jan", activity: "Flowering", status: "flower" },
-      { month: "Feb", activity: "Fruiting", status: "fruit" },
-      { month: "Mar", activity: "Harvest Cycles", status: "harvest" },
-    ],
-    pestRisks: [
-      { name: "Fruit Borer", risk: "High", solution: "Pheromone traps + Neem" },
-      { name: "Late Blight", risk: "High", solution: "Mancozeb + Metalaxyl" },
-    ],
-    fertilizerPlan: [
-      { stage: "Basal", fertilizer: "FYM 10t + DAP 50kg", timing: "Before transplant" },
-      { stage: "1st Top", fertilizer: "Urea 25kg", timing: "20 DAT" },
-      { stage: "2nd Top", fertilizer: "Potash 25kg", timing: "40 DAT" },
-    ],
-  },
-];
+// cropResults is now dynamic state — set by AI
 
 const steps = [
   { icon: MapPin, label: "Location", title: "Farm Location", subtitle: "Where is your farm located?" },
@@ -217,6 +122,7 @@ const loadingMessages = [
 
 // ── Component ──
 export default function AIRecommendation() {
+  const { toast } = useToast();
   const [currentStep, setCurrentStep] = useState(0);
   const [form, setForm] = useState<FormData>(defaultForm);
   const [showResults, setShowResults] = useState(false);
@@ -225,6 +131,7 @@ export default function AIRecommendation() {
   const [selectedCrop, setSelectedCrop] = useState<number>(0);
   const [compareMode, setCompareMode] = useState(false);
   const [compareList, setCompareList] = useState<number[]>([]);
+  const [cropResults, setCropResults] = useState<CropResult[]>([]);
 
   const update = useCallback(<K extends keyof FormData>(key: K, value: FormData[K]) => {
     setForm((prev) => ({ ...prev, [key]: value }));
@@ -240,22 +147,40 @@ export default function AIRecommendation() {
     }
   };
 
-  const handleAnalyze = () => {
+  const handleAnalyze = async () => {
     setLoading(true);
     setLoadingIdx(0);
+
+    // Animate loading messages while waiting for AI
     const interval = setInterval(() => {
       setLoadingIdx((prev) => {
-        if (prev >= loadingMessages.length - 1) {
-          clearInterval(interval);
-          setTimeout(() => {
-            setLoading(false);
-            setShowResults(true);
-          }, 600);
-          return prev;
-        }
+        if (prev >= loadingMessages.length - 1) { clearInterval(interval); return prev; }
         return prev + 1;
       });
     }, 800);
+
+    try {
+      const { data, error } = await supabase.functions.invoke("crop-recommend", {
+        body: { farmData: form },
+      });
+
+      clearInterval(interval);
+
+      if (error) throw new Error(error.message);
+      if (!data?.crops || !Array.isArray(data.crops)) throw new Error("Invalid response from AI");
+
+      setCropResults(data.crops);
+      setLoading(false);
+      setShowResults(true);
+    } catch (err) {
+      clearInterval(interval);
+      setLoading(false);
+      toast({
+        title: "AI Recommendation Failed",
+        description: err instanceof Error ? err.message : "Could not get recommendations. Please try again.",
+        variant: "destructive",
+      });
+    }
   };
 
   const handleReset = () => {
@@ -265,6 +190,7 @@ export default function AIRecommendation() {
     setSelectedCrop(0);
     setCompareMode(false);
     setCompareList([]);
+    setCropResults([]);
   };
 
   const toggleCompare = (idx: number) => {
