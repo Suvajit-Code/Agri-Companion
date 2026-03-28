@@ -1,4 +1,4 @@
-import { useRef, useMemo, Suspense } from "react";
+import { useRef, useMemo, Suspense, useState, useEffect } from "react";
 import { Canvas, useFrame, useThree } from "@react-three/fiber";
 import { Float, Environment, OrbitControls, useGLTF, ContactShadows } from "@react-three/drei";
 import * as THREE from "three";
@@ -10,13 +10,21 @@ function RobotModel() {
   const mixer = useRef<THREE.AnimationMixer | null>(null);
 
   // Setup animations if available
-  if (animations.length > 0 && !mixer.current) {
-    mixer.current = new THREE.AnimationMixer(scene);
-    animations.forEach((clip) => {
-      const action = mixer.current!.clipAction(clip);
-      action.play();
-    });
-  }
+  useEffect(() => {
+    if (animations.length > 0 && !mixer.current) {
+      mixer.current = new THREE.AnimationMixer(scene);
+      animations.forEach((clip) => {
+        const action = mixer.current!.clipAction(clip);
+        action.play();
+      });
+    }
+    return () => {
+      if (mixer.current) {
+        mixer.current.stopAllAction();
+        mixer.current = null;
+      }
+    };
+  }, [scene, animations]);
 
   useFrame((_, delta) => {
     if (mixer.current) {
@@ -130,13 +138,48 @@ function Loader() {
 }
 
 /* ── Exported Component ────────────────────────────────── */
+function ErrorFallback() {
+  return (
+    <div className="w-full h-full min-h-[500px] flex items-center justify-center bg-transparent">
+      <div className="text-center p-8 backdrop-blur-sm bg-white/5 rounded-3xl border border-white/10">
+        <div className="relative w-48 h-48 mx-auto mb-6">
+          <div className="absolute inset-0 bg-green-500/20 blur-3xl rounded-full animate-pulse" />
+          <img 
+            src="/logo.jpg" 
+            alt="Agri Companion" 
+            className="relative w-full h-full object-contain rounded-full shadow-2xl border-2 border-green-500/50" 
+          />
+        </div>
+        <h3 className="text-xl font-bold bg-gradient-to-r from-green-400 to-emerald-500 bg-clip-text text-transparent">
+          Agri Companion AI
+        </h3>
+        <p className="text-slate-400 mt-2 text-sm max-w-[250px] mx-auto">
+          Optimized interface for your device.
+        </p>
+      </div>
+    </div>
+  );
+}
+
 export default function Hero3DScene() {
+  const [hasError, setHasError] = useState(false);
+
+  if (hasError) return <ErrorFallback />;
+
   return (
     <div className="w-full h-full min-h-[500px]" style={{ cursor: "grab" }}>
       <Canvas
         camera={{ position: [0, 0.5, 8], fov: 50 }}
-        dpr={[1, 2]}
-        gl={{ antialias: true, alpha: true }}
+        dpr={[1, 1.5]}
+        gl={{ 
+          antialias: false, 
+          alpha: true,
+          powerPreference: "high-performance",
+          failIfMajorPerformanceCaveat: true
+        }}
+        onCreated={({ gl }) => {
+          gl.domElement.addEventListener('webglcontextlost', () => setHasError(true), false);
+        }}
         style={{ background: "transparent", overflow: "visible" }}
       >
         <Suspense fallback={<Loader />}>
