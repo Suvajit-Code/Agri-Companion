@@ -272,7 +272,7 @@ See the [LICENSE](LICENSE) file for full details.
 
 ## 👩‍💻 Author
 
-**Snehasish Dey** — *Building technology for the farmers of India 🇮🇳*
+**Snehasish Dey, Suvajit Ghosh** — *Building technology for the farmers of India 🇮🇳*
 
 <div align="center">
 
