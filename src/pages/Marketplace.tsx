@@ -3,7 +3,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import {
   Search, ShoppingCart, Star, Plus, Minus, X, Filter,
   Package, Leaf, Bug, Droplets, Wrench, Scissors, ChevronRight, CreditCard,
-  MapPin, TrendingDown, TrendingUp, Heart, Eye, Truck, Shield,
+  MapPin, TrendingDown, Heart, Truck, Shield,
 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -13,6 +13,8 @@ import PaymentDialog from "@/components/PaymentDialog";
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
+import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/contexts/AuthContext";
 
 interface Product {
   id: number;
@@ -36,9 +38,13 @@ interface CartItem extends Product {
   qty: number;
 }
 
-const categoryIcons: Record<string, any> = {
-  Seeds: Leaf, Fertilizers: Package, Pesticides: Bug,
-  Irrigation: Droplets, Equipment: Wrench, Tools: Scissors,
+const categoryIcons: Record<string, React.ElementType> = {
+  Seeds: Leaf,
+  Fertilizers: Package,
+  Pesticides: Bug,
+  Irrigation: Droplets,
+  Equipment: Wrench,
+  Tools: Scissors,
 };
 
 const products: Product[] = [
@@ -103,14 +109,16 @@ const products: Product[] = [
 const categories = ["All", "Seeds", "Fertilizers", "Pesticides", "Irrigation", "Equipment", "Tools"];
 
 const states = [
-  "All States", "Andhra Pradesh", "Bihar", "Chhattisgarh", "Delhi", "Goa", "Gujarat", 
-  "Haryana", "Himachal Pradesh", "Jharkhand", "Karnataka", "Kerala", "Madhya Pradesh", 
-  "Maharashtra", "Odisha", "Punjab", "Rajasthan", "Tamil Nadu", "Telangana", 
-  "Uttar Pradesh", "Uttarakhand", "West Bengal"
+  "All States", "Andhra Pradesh", "Bihar", "Chhattisgarh", "Delhi", "Goa", "Gujarat",
+  "Haryana", "Himachal Pradesh", "Jharkhand", "Karnataka", "Kerala", "Madhya Pradesh",
+  "Maharashtra", "Odisha", "Punjab", "Rajasthan", "Tamil Nadu", "Telangana",
+  "Uttar Pradesh", "Uttarakhand", "West Bengal",
 ];
 
 export default function Marketplace() {
   const { toast } = useToast();
+  const { user } = useAuth();
+  const sb = supabase as any;
   const [search, setSearch] = useState("");
   const [category, setCategory] = useState("All");
   const [stateFilter, setStateFilter] = useState("All States");
@@ -121,8 +129,9 @@ export default function Marketplace() {
   const [wishlist, setWishlist] = useState<number[]>([]);
 
   const filtered = useMemo(() => {
-    let result = products.filter((p) => {
-      const matchSearch = p.name.toLowerCase().includes(search.toLowerCase()) || 
+    const result = products.filter((p) => {
+      const matchSearch =
+        p.name.toLowerCase().includes(search.toLowerCase()) ||
         p.brand.toLowerCase().includes(search.toLowerCase()) ||
         p.location.toLowerCase().includes(search.toLowerCase());
       const matchCat = category === "All" || p.category === category;
@@ -130,7 +139,6 @@ export default function Marketplace() {
       return matchSearch && matchCat && matchState;
     });
 
-    // Sort
     if (sortBy === "price-low") result.sort((a, b) => a.price - b.price);
     else if (sortBy === "price-high") result.sort((a, b) => b.price - a.price);
     else if (sortBy === "rating") result.sort((a, b) => b.rating - a.rating);
@@ -142,32 +150,84 @@ export default function Marketplace() {
   const addToCart = (product: Product) => {
     setCart((prev) => {
       const existing = prev.find((c) => c.id === product.id);
-      if (existing) return prev.map((c) => c.id === product.id ? { ...c, qty: c.qty + 1 } : c);
+      if (existing)
+        return prev.map((c) => (c.id === product.id ? { ...c, qty: c.qty + 1 } : c));
       return [...prev, { ...product, qty: 1 }];
     });
     toast({ title: "Added to cart", description: `${product.name} added` });
   };
 
   const toggleWishlist = (id: number) => {
-    setWishlist((prev) => prev.includes(id) ? prev.filter((i) => i !== id) : [...prev, id]);
-    toast({ 
+    setWishlist((prev) =>
+      prev.includes(id) ? prev.filter((i) => i !== id) : [...prev, id]
+    );
+    toast({
       title: wishlist.includes(id) ? "Removed from wishlist" : "Added to wishlist",
-      description: wishlist.includes(id) ? "Item removed" : "Item saved for later"
+      description: wishlist.includes(id) ? "Item removed" : "Item saved for later",
     });
   };
 
   const updateQty = (id: number, delta: number) => {
     setCart((prev) =>
-      prev.map((c) => c.id === id ? { ...c, qty: Math.max(0, c.qty + delta) } : c).filter((c) => c.qty > 0)
+      prev
+        .map((c) => (c.id === id ? { ...c, qty: Math.max(0, c.qty + delta) } : c))
+        .filter((c) => c.qty > 0)
     );
   };
 
   const cartTotal = cart.reduce((sum, c) => sum + c.price * c.qty, 0);
   const cartCount = cart.reduce((sum, c) => sum + c.qty, 0);
 
-  const handleCheckoutSuccess = () => {
-    setCart([]);
-    setShowCart(false);
+  const handleCheckoutSuccess = async () => {
+    if (!user) {
+      toast({
+        title: "Error",
+        description: "You must be logged in to place an order.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    try {
+      const orderData = {
+        user_id: user.id,
+        items: cart.map((item) => ({
+          id: item.id,
+          name: item.name,
+          qty: item.qty,
+          price: item.price,
+        })),
+        total_price: cartTotal + (cartTotal >= 999 ? 0 : 49),
+        status: "pending",
+        payment_status: "paid",
+        shipping_address: "Default Delivery Address",
+      };
+
+      const localKey = `local_orders_${user.id}`;
+      const localOrders = JSON.parse(localStorage.getItem(localKey) || "[]");
+      const newLocalOrder = {
+        ...orderData,
+        id: `ORD-${Math.random().toString(36).substr(2, 6).toUpperCase()}`,
+        created_at: new Date().toISOString(),
+      };
+      localStorage.setItem(localKey, JSON.stringify([newLocalOrder, ...localOrders]));
+
+      await sb.from("marketplace_orders").insert([orderData]);
+
+      toast({
+        title: "Order Placed!",
+        description: "Your order details are now visible in the Orders section.",
+      });
+      setCart([]);
+      setShowCart(false);
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : "Unknown error";
+      toast({
+        title: "Error",
+        description: "Failed to process order: " + message,
+        variant: "destructive",
+      });
+    }
   };
 
   return (
@@ -175,10 +235,16 @@ export default function Marketplace() {
       {/* Header */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
-          <motion.h1 initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="text-3xl font-heading font-bold text-foreground">
+          <motion.h1
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="text-3xl font-heading font-bold text-foreground"
+          >
             🛒 Agricultural Marketplace
           </motion.h1>
-          <p className="text-muted-foreground mt-1">Premium seeds, fertilizers, equipment & more from verified sellers across India</p>
+          <p className="text-muted-foreground mt-1">
+            Premium seeds, fertilizers, equipment & more from verified sellers across India
+          </p>
         </div>
         <Button variant="outline" className="relative" onClick={() => setShowCart(!showCart)}>
           <ShoppingCart className="w-4 h-4 mr-2" /> Cart
@@ -191,14 +257,22 @@ export default function Marketplace() {
       </div>
 
       {/* Stats Banner */}
-      <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }} className="grid grid-cols-2 md:grid-cols-4 gap-4">
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.1 }}
+        className="grid grid-cols-2 md:grid-cols-4 gap-4"
+      >
         {[
           { icon: Package, value: "5000+", label: "Products", color: "text-primary" },
           { icon: MapPin, value: "28+", label: "States Covered", color: "text-success" },
           { icon: Truck, value: "Free", label: "Delivery > ₹999", color: "text-warning" },
           { icon: Shield, value: "100%", label: "Genuine Products", color: "text-info" },
         ].map((stat) => (
-          <div key={stat.label} className="glass-card rounded-xl p-4 text-center hover:shadow-[var(--shadow-hover)] transition-all">
+          <div
+            key={stat.label}
+            className="glass-card rounded-xl p-4 text-center hover:shadow-[var(--shadow-hover)] transition-all"
+          >
             <stat.icon className={`w-6 h-6 mx-auto mb-2 ${stat.color}`} />
             <div className="font-mono font-bold text-xl text-foreground">{stat.value}</div>
             <div className="text-xs text-muted-foreground">{stat.label}</div>
@@ -207,7 +281,12 @@ export default function Marketplace() {
       </motion.div>
 
       {/* Filters */}
-      <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.15 }} className="space-y-4">
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.15 }}
+        className="space-y-4"
+      >
         {/* Categories */}
         <div className="flex gap-3 overflow-x-auto pb-2">
           {categories.map((cat) => {
@@ -233,7 +312,12 @@ export default function Marketplace() {
         <div className="flex flex-col sm:flex-row gap-3">
           <div className="relative flex-1">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-            <Input placeholder="Search products, brands, locations..." className="pl-10" value={search} onChange={(e) => setSearch(e.target.value)} />
+            <Input
+              placeholder="Search products, brands, locations..."
+              className="pl-10"
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+            />
           </div>
           <Select value={stateFilter} onValueChange={setStateFilter}>
             <SelectTrigger className="w-full sm:w-48">
@@ -242,7 +326,9 @@ export default function Marketplace() {
             </SelectTrigger>
             <SelectContent>
               {states.map((state) => (
-                <SelectItem key={state} value={state}>{state}</SelectItem>
+                <SelectItem key={state} value={state}>
+                  {state}
+                </SelectItem>
               ))}
             </SelectContent>
           </Select>
@@ -266,13 +352,22 @@ export default function Marketplace() {
       <div className="flex items-center justify-between">
         <p className="text-sm text-muted-foreground">
           Showing <span className="font-semibold text-foreground">{filtered.length}</span> products
-          {stateFilter !== "All States" && <span> in <span className="font-semibold text-foreground">{stateFilter}</span></span>}
+          {stateFilter !== "All States" && (
+            <span>
+              {" "}
+              in <span className="font-semibold text-foreground">{stateFilter}</span>
+            </span>
+          )}
         </p>
       </div>
 
       <div className="flex gap-6">
         {/* Product Grid */}
-        <div className={`flex-1 grid grid-cols-1 sm:grid-cols-2 ${showCart ? "lg:grid-cols-2" : "lg:grid-cols-3"} gap-4`}>
+        <div
+          className={`flex-1 grid grid-cols-1 sm:grid-cols-2 ${
+            showCart ? "lg:grid-cols-2" : "lg:grid-cols-3"
+          } gap-4`}
+        >
           {filtered.map((product, i) => (
             <motion.div
               key={product.id}
@@ -293,11 +388,17 @@ export default function Marketplace() {
                     <TrendingDown className="w-3 h-3" /> {product.discount}%
                   </span>
                 )}
-                <button 
+                <button
                   onClick={() => toggleWishlist(product.id)}
                   className="absolute bottom-3 right-3 w-8 h-8 rounded-full bg-background/80 backdrop-blur-sm flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity hover:bg-background"
                 >
-                  <Heart className={`w-4 h-4 ${wishlist.includes(product.id) ? 'fill-red-500 text-red-500' : 'text-muted-foreground'}`} />
+                  <Heart
+                    className={`w-4 h-4 ${
+                      wishlist.includes(product.id)
+                        ? "fill-red-500 text-red-500"
+                        : "text-muted-foreground"
+                    }`}
+                  />
                 </button>
                 <span className="text-6xl">{product.image}</span>
               </div>
@@ -309,8 +410,10 @@ export default function Marketplace() {
                   {product.location}, {product.state}
                 </div>
                 <p className="text-xs text-muted-foreground">{product.brand}</p>
-                <h3 className="font-heading font-semibold text-sm text-foreground mt-0.5 line-clamp-2 flex-1">{product.name}</h3>
-                
+                <h3 className="font-heading font-semibold text-sm text-foreground mt-0.5 line-clamp-2 flex-1">
+                  {product.name}
+                </h3>
+
                 <div className="flex items-center gap-2 mt-2">
                   <div className="flex items-center gap-1">
                     <Star className="w-3 h-3 text-accent fill-accent" />
@@ -326,9 +429,13 @@ export default function Marketplace() {
 
                 <div className="flex items-end justify-between mt-3 pt-3 border-t border-border">
                   <div>
-                    <span className="font-numbers font-bold text-lg text-foreground">₹{product.price.toLocaleString()}</span>
+                    <span className="font-numbers font-bold text-lg text-foreground">
+                      ₹{product.price.toLocaleString()}
+                    </span>
                     {product.originalPrice && (
-                      <span className="text-xs text-muted-foreground line-through ml-1">₹{product.originalPrice.toLocaleString()}</span>
+                      <span className="text-xs text-muted-foreground line-through ml-1">
+                        ₹{product.originalPrice.toLocaleString()}
+                      </span>
                     )}
                   </div>
                   <Button
@@ -337,7 +444,13 @@ export default function Marketplace() {
                     onClick={() => addToCart(product)}
                     className="gradient-hero text-primary-foreground border-0 hover:opacity-90"
                   >
-                    {product.inStock ? <><Plus className="w-3 h-3 mr-1" /> Add</> : "Out of Stock"}
+                    {product.inStock ? (
+                      <>
+                        <Plus className="w-3 h-3 mr-1" /> Add
+                      </>
+                    ) : (
+                      "Out of Stock"
+                    )}
                   </Button>
                 </div>
               </div>
@@ -356,8 +469,12 @@ export default function Marketplace() {
             >
               <div className="glass-card rounded-2xl p-5 sticky top-24">
                 <div className="flex items-center justify-between mb-4">
-                  <h3 className="font-heading font-semibold text-foreground">Cart ({cartCount})</h3>
-                  <button onClick={() => setShowCart(false)}><X className="w-4 h-4 text-muted-foreground" /></button>
+                  <h3 className="font-heading font-semibold text-foreground">
+                    Cart ({cartCount})
+                  </h3>
+                  <button onClick={() => setShowCart(false)}>
+                    <X className="w-4 h-4 text-muted-foreground" />
+                  </button>
                 </div>
 
                 {cart.length === 0 ? (
@@ -370,16 +487,31 @@ export default function Marketplace() {
                   <>
                     <div className="space-y-3 max-h-80 overflow-y-auto">
                       {cart.map((item) => (
-                        <div key={item.id} className="flex items-center gap-3 p-2 rounded-lg bg-muted/30">
+                        <div
+                          key={item.id}
+                          className="flex items-center gap-3 p-2 rounded-lg bg-muted/30"
+                        >
                           <span className="text-2xl">{item.image}</span>
                           <div className="flex-1 min-w-0">
                             <p className="text-sm text-foreground line-clamp-1">{item.name}</p>
-                            <p className="text-xs text-muted-foreground font-numbers">₹{item.price.toLocaleString()}</p>
+                            <p className="text-xs text-muted-foreground font-numbers">
+                              ₹{item.price.toLocaleString()}
+                            </p>
                           </div>
                           <div className="flex items-center gap-1">
-                            <button onClick={() => updateQty(item.id, -1)} className="w-6 h-6 rounded bg-muted flex items-center justify-center hover:bg-muted/80"><Minus className="w-3 h-3" /></button>
+                            <button
+                              onClick={() => updateQty(item.id, -1)}
+                              className="w-6 h-6 rounded bg-muted flex items-center justify-center hover:bg-muted/80"
+                            >
+                              <Minus className="w-3 h-3" />
+                            </button>
                             <span className="text-sm font-numbers w-6 text-center">{item.qty}</span>
-                            <button onClick={() => updateQty(item.id, 1)} className="w-6 h-6 rounded bg-muted flex items-center justify-center hover:bg-muted/80"><Plus className="w-3 h-3" /></button>
+                            <button
+                              onClick={() => updateQty(item.id, 1)}
+                              className="w-6 h-6 rounded bg-muted flex items-center justify-center hover:bg-muted/80"
+                            >
+                              <Plus className="w-3 h-3" />
+                            </button>
                           </div>
                         </div>
                       ))}
@@ -387,21 +519,28 @@ export default function Marketplace() {
                     <div className="border-t border-border mt-4 pt-4 space-y-3">
                       <div className="flex justify-between text-sm">
                         <span className="text-muted-foreground">Subtotal</span>
-                        <span className="font-numbers text-foreground">₹{cartTotal.toLocaleString()}</span>
+                        <span className="font-numbers text-foreground">
+                          ₹{cartTotal.toLocaleString()}
+                        </span>
                       </div>
                       <div className="flex justify-between text-sm">
                         <span className="text-muted-foreground">Delivery</span>
-                        <span className="font-numbers text-success">{cartTotal >= 999 ? "Free" : "₹49"}</span>
+                        <span className="font-numbers text-success">
+                          {cartTotal >= 999 ? "Free" : "₹49"}
+                        </span>
                       </div>
                       <div className="flex justify-between text-sm font-medium">
                         <span className="text-foreground">Total</span>
-                        <span className="font-numbers font-bold text-foreground">₹{(cartTotal + (cartTotal >= 999 ? 0 : 49)).toLocaleString()}</span>
+                        <span className="font-numbers font-bold text-foreground">
+                          ₹{(cartTotal + (cartTotal >= 999 ? 0 : 49)).toLocaleString()}
+                        </span>
                       </div>
                       <Button
                         className="w-full gradient-warm text-secondary-foreground border-0 hover:opacity-90"
                         onClick={() => setPaymentOpen(true)}
                       >
-                        <CreditCard className="w-4 h-4 mr-2" /> Checkout <ChevronRight className="w-4 h-4 ml-1" />
+                        <CreditCard className="w-4 h-4 mr-2" /> Checkout{" "}
+                        <ChevronRight className="w-4 h-4 ml-1" />
                       </Button>
                     </div>
                   </>
@@ -416,7 +555,15 @@ export default function Marketplace() {
         <div className="text-center py-16">
           <Package className="w-12 h-12 mx-auto text-muted-foreground/40 mb-3" />
           <p className="text-muted-foreground">No products found matching your criteria</p>
-          <Button variant="outline" className="mt-4" onClick={() => { setSearch(""); setCategory("All"); setStateFilter("All States"); }}>
+          <Button
+            variant="outline"
+            className="mt-4"
+            onClick={() => {
+              setSearch("");
+              setCategory("All");
+              setStateFilter("All States");
+            }}
+          >
             Clear Filters
           </Button>
         </div>

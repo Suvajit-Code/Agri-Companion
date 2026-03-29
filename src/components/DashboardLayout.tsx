@@ -8,6 +8,17 @@ import {
 } from "lucide-react";
 import ThemeToggle from "@/components/ThemeToggle";
 import BrandLogo from "@/components/BrandLogo";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
+
+const mockNotifications = [
+  { id: 1, text: "AI recommended Mustard for Rabi season", time: "2h ago", color: "text-primary" },
+  { id: 2, text: "Tomato prices up by 12% in Azadpur", time: "4h ago", color: "text-success" },
+  { id: 3, text: "New order received — 50kg Organic Rice", time: "1d ago", color: "text-info" },
+];
 
 const menuItems = [
   { icon: LayoutDashboard, label: "Dashboard", path: "/dashboard" },
@@ -34,7 +45,7 @@ export default function DashboardLayout() {
   const { user, signOut } = useAuth();
 
   const displayName = user?.full_name || user?.email || "User";
-  const initials = displayName.split(" ").map(n => n[0]).join("").toUpperCase().slice(0, 2);
+  const initials = (displayName || "U").split(" ").filter(Boolean).map(n => n[0]).join("").toUpperCase().slice(0, 2);
 
   const handleSignOut = async () => {
     await signOut();
@@ -139,13 +150,31 @@ export default function DashboardLayout() {
           </div>
           <div className="flex items-center gap-3">
             <ThemeToggle className="text-muted-foreground" />
-            <button className="relative text-muted-foreground hover:text-foreground transition-colors p-2 rounded-lg hover:bg-muted">
-              <Bell className="w-5 h-5" />
-              <span className="absolute top-1 right-1 w-4 h-4 rounded-full bg-secondary text-secondary-foreground text-[10px] font-bold flex items-center justify-center">3</span>
-            </button>
-            <div className="w-8 h-8 rounded-full gradient-hero flex items-center justify-center text-primary-foreground font-heading font-bold text-xs">
+            <Popover>
+              <PopoverTrigger asChild>
+                <button className="relative text-muted-foreground hover:text-foreground transition-colors p-2 rounded-lg hover:bg-muted">
+                  <Bell className="w-5 h-5" />
+                  <span className="absolute top-1 right-1 w-4 h-4 rounded-full bg-secondary text-secondary-foreground text-[10px] font-bold flex items-center justify-center">3</span>
+                </button>
+              </PopoverTrigger>
+              <PopoverContent className="w-80 p-0" align="end">
+                <div className="p-4 border-b border-border flex items-center justify-between">
+                  <h4 className="font-heading font-bold text-sm">Notifications</h4>
+                  <button onClick={() => navigate("/dashboard")} className="text-[10px] text-primary hover:underline font-medium">View All</button>
+                </div>
+                <div className="max-h-[300px] overflow-y-auto">
+                  {mockNotifications.map((n) => (
+                    <div key={n.id} className="p-4 border-b border-border last:border-0 hover:bg-muted/50 transition-colors cursor-pointer">
+                      <p className="text-xs text-foreground leading-snug">{n.text}</p>
+                      <p className="text-[10px] text-muted-foreground mt-1">{n.time}</p>
+                    </div>
+                  ))}
+                </div>
+              </PopoverContent>
+            </Popover>
+            <button onClick={() => navigate("/dashboard/settings")} className="w-8 h-8 rounded-full gradient-hero flex items-center justify-center text-primary-foreground font-heading font-bold text-xs hover:opacity-90 transition-all border-2 border-transparent hover:border-primary/20 focus:outline-none">
               {initials}
-            </div>
+            </button>
           </div>
         </header>
 

@@ -108,10 +108,12 @@ export default function DashboardHome() {
         {/* Recent Activity */}
         <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.3 }} className="glass-card rounded-xl p-6">
           <div className="flex items-center justify-between mb-4">
-            <h3 className="font-heading font-semibold text-foreground">Recent Activity</h3>
-            <Bell className="w-4 h-4 text-muted-foreground" />
+            <h3 className="font-heading font-semibold text-foreground">Notification History</h3>
+            <Button variant="ghost" size="sm" className="h-7 text-xs gap-1 text-primary hover:text-primary hover:bg-primary/10">
+              Clear all
+            </Button>
           </div>
-          <div className="space-y-3">
+          <div className="space-y-3 max-h-[350px] overflow-y-auto pr-1 scrollbar-hide">
             {recentActivities.map((activity, i) => (
               <motion.div key={i} initial={{ opacity: 0, x: -10 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: 0.3 + i * 0.05 }}
                 className="flex items-start gap-3 p-2 rounded-lg hover:bg-muted/30 transition-colors cursor-pointer"

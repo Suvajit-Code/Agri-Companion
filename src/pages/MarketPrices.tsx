@@ -177,7 +177,7 @@ export default function MarketPrices() {
   }, [apiRecords]);
 
   const filtered = useMemo(() => {
-    let result = liveCrops.filter((c) => {
+    const result = liveCrops.filter((c) => {
       const searchLower = search.toLowerCase();
       const matchSearch = 
         c.name.toLowerCase().includes(searchLower) || 

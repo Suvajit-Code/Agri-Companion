@@ -2,9 +2,9 @@ import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import {
-  Users, MessageSquare, ThumbsUp, Share2, Search, Plus, X, Copy, Check,
+  Users, MessageSquare, Search, Plus, X, Check, Copy,
   TrendingUp, Leaf, Bug, CloudSun, Tractor, HelpCircle, Filter,
-  Heart, MessageCircle, Eye, Clock, ChevronDown, LogIn, Edit2, Trash2, Bookmark, Share,
+  Heart, MessageCircle, Eye, Clock, LogIn, Edit2, Trash2, Share,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -66,6 +66,7 @@ export default function Community() {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const { toast } = useToast();
+  const sb = supabase as any;
 
   const [activeCategory, setActiveCategory] = useState("all");
   const [searchQuery, setSearchQuery] = useState("");
@@ -92,7 +93,7 @@ export default function Community() {
   const { data: posts = [], isLoading } = useQuery({
     queryKey: ["communityPosts", user?.id],
     queryFn: async () => {
-      const { data, error } = await supabase
+      const { data, error } = await sb
         .from("community_posts")
         .select("id, user_id, title, content, category, tags, likes_count, views_count, created_at")
         .order("created_at", { ascending: false })
@@ -102,19 +103,33 @@ export default function Community() {
       if (!data) return [];
 
       // Fetch user full names
-      const userIds = Array.from(new Set((data as any[]).map((p) => p.user_id)));
-      const { data: profilesData } = await supabase
+      const userIds = Array.from(new Set((data as Array<{ user_id: string }>).map((p) => p.user_id)));
+      const { data: profilesData } = await sb
         .from("profiles")
         .select("user_id, full_name")
         .in("user_id", userIds);
 
-      const profileMap = new Map(profilesData?.map((p: any) => [p.user_id, p.full_name]) || []);
+      const profileMap = new Map<string, string>(
+        profilesData?.map((p: { user_id: string; full_name: string }) => [p.user_id, p.full_name]) || []
+      );
 
       // Fetch comments for each post
       const postsWithComments: Post[] = await Promise.all(
-        (data as any[]).map(async (post) => {
+        (
+          data as Array<{
+            id: string;
+            user_id: string;
+            title: string;
+            content: string;
+            category: string;
+            tags: string[];
+            likes_count: number;
+            views_count: number;
+            created_at: string;
+          }>
+        ).map(async (post) => {
           // Fetch comments
-          const { data: commentsData } = await supabase
+          const { data: commentsData } = await sb
             .from("community_comments")
             .select("id, user_id, content, likes_count, created_at")
             .eq("post_id", post.id)
@@ -123,44 +138,62 @@ export default function Community() {
           // Fetch comment authors
           let comments: Comment[] = [];
           if (commentsData && commentsData.length > 0) {
-            const commentUserIds = Array.from(new Set(commentsData.map((c: any) => c.user_id)));
-            const { data: commentProfiles } = await supabase
+            const commentUserIds = Array.from(
+              new Set(commentsData.map((c: { user_id: string }) => c.user_id))
+            );
+            const { data: commentProfiles } = await sb
               .from("profiles")
               .select("user_id, full_name")
               .in("user_id", commentUserIds);
 
-            const commentProfileMap = new Map(
-              commentProfiles?.map((p: any) => [p.user_id, p.full_name]) || []
+            const commentProfileMap = new Map<string, string>(
+              commentProfiles?.map((p: { user_id: string; full_name: string }) => [
+                p.user_id,
+                p.full_name,
+              ]) || []
             );
 
             // Fetch comment likes by current user
-            let commentLikeMap = new Map();
+            let commentLikeMap = new Map<string, boolean>();
             if (isAuthenticated && user) {
-              const { data: commentLikes } = await supabase
+              const { data: commentLikes } = await sb
                 .from("community_comment_likes")
                 .select("comment_id")
                 .eq("user_id", user.id)
-                .in("comment_id", commentsData.map((c: any) => c.id));
+                .in(
+                  "comment_id",
+                  commentsData.map((c: { id: string }) => c.id)
+                );
 
-              commentLikeMap = new Map(commentLikes?.map((cl: any) => [cl.comment_id, true]) || []);
+              commentLikeMap = new Map(
+                commentLikes?.map((cl: { comment_id: string }) => [cl.comment_id, true]) || []
+              );
             }
 
-            comments = commentsData.map((comment: any) => ({
-              id: comment.id,
-              author: commentProfileMap.get(comment.user_id) || "Farmer",
-              avatar: (commentProfileMap.get(comment.user_id) || "F")[0].toUpperCase(),
-              content: comment.content,
-              created_at: comment.created_at,
-              likes_count: comment.likes_count || 0,
-              user_id: comment.user_id,
-              liked_by_user: !!commentLikeMap.get(comment.id),
-            }));
+            comments = commentsData.map(
+              (comment: {
+                id: string;
+                user_id: string;
+                content: string;
+                likes_count: number;
+                created_at: string;
+              }) => ({
+                id: comment.id,
+                author: commentProfileMap.get(comment.user_id) || "Farmer",
+                avatar: (commentProfileMap.get(comment.user_id) || "F")[0].toUpperCase(),
+                content: comment.content,
+                created_at: comment.created_at,
+                likes_count: comment.likes_count || 0,
+                user_id: comment.user_id,
+                liked_by_user: !!commentLikeMap.get(comment.id),
+              })
+            );
           }
 
           // Check if current user liked this post
           let liked_by_user = false;
           if (isAuthenticated && user) {
-            const { data: userLike } = await supabase
+            const { data: userLike } = await sb
               .from("community_post_likes")
               .select("id")
               .eq("post_id", post.id)
@@ -185,7 +218,7 @@ export default function Community() {
             created_at: post.created_at,
             tags: post.tags || [],
             liked_by_user,
-            bookmarked_by_user: false, // TODO: Implement bookmarks
+            bookmarked_by_user: false,
           };
         })
       );
@@ -197,8 +230,13 @@ export default function Community() {
 
   // Create post mutation
   const createPostMutation = useMutation({
-    mutationFn: async (data: { title: string; content: string; category: string; tags: string[] }) => {
-      const { error } = await supabase.from("community_posts").insert([
+    mutationFn: async (data: {
+      title: string;
+      content: string;
+      category: string;
+      tags: string[];
+    }) => {
+      const { error } = await sb.from("community_posts").insert([
         {
           user_id: user?.id,
           title: data.title,
@@ -219,7 +257,7 @@ export default function Community() {
       setShowCreateDialog(false);
       toast({ title: "Success", description: "Post created successfully!" });
     },
-    onError: (error: any) => {
+    onError: (error: Error) => {
       toast({ title: "Error", description: error.message, variant: "destructive" });
     },
   });
@@ -227,7 +265,7 @@ export default function Community() {
   // Increment view count
   const incrementViewMutation = useMutation({
     mutationFn: async (postId: string) => {
-      const { error } = await supabase.rpc("increment_post_views", { post_id: postId });
+      const { error } = await sb.rpc("increment_post_views", { post_id: postId });
       if (error) throw error;
     },
     onError: () => {
@@ -242,13 +280,13 @@ export default function Community() {
       if (!post) throw new Error("Post not found");
 
       if (post.liked_by_user) {
-        await supabase
+        await sb
           .from("community_post_likes")
           .delete()
           .eq("post_id", postId)
           .eq("user_id", user?.id);
       } else {
-        await supabase
+        await sb
           .from("community_post_likes")
           .insert([{ post_id: postId, user_id: user?.id }]);
       }
@@ -256,7 +294,7 @@ export default function Community() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["communityPosts"] });
     },
-    onError: (error: any) => {
+    onError: (error: Error) => {
       toast({ title: "Error", description: error.message, variant: "destructive" });
     },
   });
@@ -264,15 +302,13 @@ export default function Community() {
   // Add comment mutation
   const addCommentMutation = useMutation({
     mutationFn: async (data: { postId: string; content: string }) => {
-      const { error } = await supabase
-        .from("community_comments")
-        .insert([
-          {
-            post_id: data.postId,
-            user_id: user?.id,
-            content: data.content,
-          },
-        ]);
+      const { error } = await sb.from("community_comments").insert([
+        {
+          post_id: data.postId,
+          user_id: user?.id,
+          content: data.content,
+        },
+      ]);
 
       if (error) throw error;
     },
@@ -285,8 +321,14 @@ export default function Community() {
 
   // Edit post mutation
   const editPostMutation = useMutation({
-    mutationFn: async (data: { postId: string; title: string; content: string; category: string; tags: string[] }) => {
-      const { error } = await supabase
+    mutationFn: async (data: {
+      postId: string;
+      title: string;
+      content: string;
+      category: string;
+      tags: string[];
+    }) => {
+      const { error } = await sb
         .from("community_posts")
         .update({
           title: data.title,
@@ -309,7 +351,7 @@ export default function Community() {
   // Delete post mutation
   const deletePostMutation = useMutation({
     mutationFn: async (postId: string) => {
-      const { error } = await supabase
+      const { error } = await sb
         .from("community_posts")
         .delete()
         .eq("id", postId);
@@ -330,13 +372,13 @@ export default function Community() {
       if (!comment) throw new Error("Comment not found");
 
       if (comment.liked_by_user) {
-        await supabase
+        await sb
           .from("community_comment_likes")
           .delete()
           .eq("comment_id", commentId)
           .eq("user_id", user?.id);
       } else {
-        await supabase
+        await sb
           .from("community_comment_likes")
           .insert([{ comment_id: commentId, user_id: user?.id }]);
       }
@@ -352,7 +394,8 @@ export default function Community() {
       (p) =>
         searchQuery === "" ||
         p.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        (p.tags && p.tags.some((t: string) => t.toLowerCase().includes(searchQuery.toLowerCase())))
+        (p.tags &&
+          p.tags.some((t: string) => t.toLowerCase().includes(searchQuery.toLowerCase())))
     )
     .sort((a, b) => {
       if (sortBy === "popular") return (b.likes_count || 0) - (a.likes_count || 0);
@@ -373,7 +416,10 @@ export default function Community() {
       title: newTitle,
       content: newContent,
       category: newCategory,
-      tags: newTags.split(",").map((t) => t.trim()).filter(Boolean),
+      tags: newTags
+        .split(",")
+        .map((t) => t.trim())
+        .filter(Boolean),
     });
   };
 
@@ -418,7 +464,10 @@ export default function Community() {
       title: editTitle,
       content: editContent,
       category: editCategory,
-      tags: editTags.split(",").map((t) => t.trim()).filter(Boolean),
+      tags: editTags
+        .split(",")
+        .map((t) => t.trim())
+        .filter(Boolean),
     });
   };
 
@@ -475,6 +524,9 @@ export default function Community() {
     if (seconds < 604800) return `${Math.floor(seconds / 86400)}d ago`;
     return postDate.toLocaleDateString();
   };
+
+  // Suppress unused variable warning for useEffect
+  void useEffect;
 
   return (
     <div className="space-y-6">
@@ -649,7 +701,10 @@ export default function Community() {
                         {categories.find((c) => c.id === post.category)?.label}
                       </Badge>
                       {post.tags.slice(0, 3).map((tag) => (
-                        <span key={tag} className="text-xs text-muted-foreground bg-muted/50 px-2 py-1 rounded-full font-medium">
+                        <span
+                          key={tag}
+                          className="text-xs text-muted-foreground bg-muted/50 px-2 py-1 rounded-full font-medium"
+                        >
                           #{tag}
                         </span>
                       ))}
@@ -664,7 +719,9 @@ export default function Community() {
                           post.liked_by_user ? "text-red-500" : "hover:text-red-500"
                         }`}
                       >
-                        <Heart className={`w-4 h-4 ${post.liked_by_user ? "fill-current" : ""}`} />
+                        <Heart
+                          className={`w-4 h-4 ${post.liked_by_user ? "fill-current" : ""}`}
+                        />
                         {post.likes_count}
                       </button>
                       <span className="flex items-center gap-1.5 text-sm font-medium">
@@ -707,7 +764,9 @@ export default function Community() {
                     </div>
                     <div className="flex-1">
                       <p className="font-semibold text-sm">{selectedPost.author}</p>
-                      <p className="text-xs text-muted-foreground">{getTimeAgo(selectedPost.created_at)}</p>
+                      <p className="text-xs text-muted-foreground">
+                        {getTimeAgo(selectedPost.created_at)}
+                      </p>
                     </div>
                   </div>
                   {user?.id === selectedPost.user_id && (
@@ -731,7 +790,9 @@ export default function Community() {
                     </div>
                   )}
                 </div>
-                <DialogTitle className="font-heading text-xl mt-4">{selectedPost.title}</DialogTitle>
+                <DialogTitle className="font-heading text-xl mt-4">
+                  {selectedPost.title}
+                </DialogTitle>
               </DialogHeader>
 
               <div className="space-y-5">
@@ -744,7 +805,10 @@ export default function Community() {
                     {categories.find((c) => c.id === selectedPost.category)?.label}
                   </Badge>
                   {selectedPost.tags.map((tag) => (
-                    <span key={tag} className="text-xs text-muted-foreground bg-muted/50 px-2 py-1 rounded-full">
+                    <span
+                      key={tag}
+                      className="text-xs text-muted-foreground bg-muted/50 px-2 py-1 rounded-full"
+                    >
                       #{tag}
                     </span>
                   ))}
@@ -757,7 +821,9 @@ export default function Community() {
                       selectedPost.liked_by_user ? "text-red-500" : "hover:text-red-500"
                     }`}
                   >
-                    <Heart className={`w-4 h-4 ${selectedPost.liked_by_user ? "fill-current" : ""}`} />
+                    <Heart
+                      className={`w-4 h-4 ${selectedPost.liked_by_user ? "fill-current" : ""}`}
+                    />
                     {selectedPost.likes_count} Likes
                   </button>
                   <span className="flex items-center gap-2 text-sm font-medium">
@@ -839,17 +905,25 @@ export default function Community() {
                           <div className="flex-1">
                             <div className="flex items-center gap-2 mb-1">
                               <span className="font-medium text-sm">{comment.author}</span>
-                              <span className="text-xs text-muted-foreground">{getTimeAgo(comment.created_at)}</span>
+                              <span className="text-xs text-muted-foreground">
+                                {getTimeAgo(comment.created_at)}
+                              </span>
                             </div>
-                            <p className="text-sm text-muted-foreground leading-relaxed mb-2">{comment.content}</p>
+                            <p className="text-sm text-muted-foreground leading-relaxed mb-2">
+                              {comment.content}
+                            </p>
                             {isAuthenticated && (
                               <button
                                 onClick={() => handleLikeComment(comment.id)}
                                 className={`flex items-center gap-1 text-xs font-medium transition-all ${
-                                  comment.liked_by_user ? "text-red-500" : "text-muted-foreground hover:text-red-500"
+                                  comment.liked_by_user
+                                    ? "text-red-500"
+                                    : "text-muted-foreground hover:text-red-500"
                                 }`}
                               >
-                                <Heart className={`w-3 h-3 ${comment.liked_by_user ? "fill-current" : ""}`} />
+                                <Heart
+                                  className={`w-3 h-3 ${comment.liked_by_user ? "fill-current" : ""}`}
+                                />
                                 {comment.likes_count}
                               </button>
                             )}
@@ -922,7 +996,11 @@ export default function Community() {
               >
                 {editPostMutation.isPending ? "Saving..." : "Save Changes"}
               </Button>
-              <Button onClick={() => setShowEditDialog(false)} variant="outline" className="flex-1">
+              <Button
+                onClick={() => setShowEditDialog(false)}
+                variant="outline"
+                className="flex-1"
+              >
                 Cancel
               </Button>
             </div>
