@@ -26,30 +26,76 @@ interface CropPrice {
 }
 
 const crops: CropPrice[] = [
-  { id: 1, name: "Wheat", nameHi: "गेहूँ", emoji: "🌾", price: 2650, unit: "quintal", change24h: 2.1, mandi: "Azadpur", state: "Delhi", category: "Cereals",
-    history: [{ date: "Mon", price: 2580 }, { date: "Tue", price: 2600 }, { date: "Wed", price: 2620 }, { date: "Thu", price: 2610 }, { date: "Fri", price: 2640 }, { date: "Sat", price: 2650 }] },
-  { id: 2, name: "Rice (Basmati)", nameHi: "चावल", emoji: "🍚", price: 4200, unit: "quintal", change24h: -1.3, mandi: "Karnal", state: "Haryana", category: "Cereals",
-    history: [{ date: "Mon", price: 4300 }, { date: "Tue", price: 4280 }, { date: "Wed", price: 4250 }, { date: "Thu", price: 4230 }, { date: "Fri", price: 4210 }, { date: "Sat", price: 4200 }] },
-  { id: 3, name: "Tomato", nameHi: "टमाटर", emoji: "🍅", price: 2800, unit: "quintal", change24h: 12.5, mandi: "Azadpur", state: "Delhi", category: "Vegetables",
-    history: [{ date: "Mon", price: 2200 }, { date: "Tue", price: 2350 }, { date: "Wed", price: 2500 }, { date: "Thu", price: 2600 }, { date: "Fri", price: 2700 }, { date: "Sat", price: 2800 }] },
-  { id: 4, name: "Potato", nameHi: "आलू", emoji: "🥔", price: 1800, unit: "quintal", change24h: -3.2, mandi: "Kolkata", state: "West Bengal", category: "Vegetables",
-    history: [{ date: "Mon", price: 1900 }, { date: "Tue", price: 1880 }, { date: "Wed", price: 1860 }, { date: "Thu", price: 1840 }, { date: "Fri", price: 1820 }, { date: "Sat", price: 1800 }] },
-  { id: 5, name: "Onion", nameHi: "प्याज़", emoji: "🧅", price: 2400, unit: "quintal", change24h: 5.8, mandi: "Lasalgaon", state: "Maharashtra", category: "Vegetables",
+  // Vegetables
+  { id: 1, name: "Tomato", nameHi: "टमाटर", emoji: "🍅", price: 2800, unit: "kg", change24h: 8.5, mandi: "Azadpur", state: "Delhi", category: "Vegetables",
+    history: [{ date: "Mon", price: 2200 }, { date: "Tue", price: 2400 }, { date: "Wed", price: 2500 }, { date: "Thu", price: 2600 }, { date: "Fri", price: 2700 }, { date: "Sat", price: 2800 }] },
+  { id: 2, name: "Onion", nameHi: "प्याज़", emoji: "🧅", price: 2400, unit: "kg", change24h: 5.2, mandi: "Lasalgaon", state: "Maharashtra", category: "Vegetables",
     history: [{ date: "Mon", price: 2200 }, { date: "Tue", price: 2250 }, { date: "Wed", price: 2300 }, { date: "Thu", price: 2320 }, { date: "Fri", price: 2370 }, { date: "Sat", price: 2400 }] },
-  { id: 6, name: "Soybean", nameHi: "सोयाबीन", emoji: "🫘", price: 4800, unit: "quintal", change24h: 1.4, mandi: "Indore", state: "Madhya Pradesh", category: "Oilseeds",
-    history: [{ date: "Mon", price: 4700 }, { date: "Tue", price: 4720 }, { date: "Wed", price: 4740 }, { date: "Thu", price: 4760 }, { date: "Fri", price: 4780 }, { date: "Sat", price: 4800 }] },
-  { id: 7, name: "Mustard", nameHi: "सरसों", emoji: "🌻", price: 5400, unit: "quintal", change24h: -0.8, mandi: "Jaipur", state: "Rajasthan", category: "Oilseeds",
-    history: [{ date: "Mon", price: 5450 }, { date: "Tue", price: 5430 }, { date: "Wed", price: 5420 }, { date: "Thu", price: 5410 }, { date: "Fri", price: 5405 }, { date: "Sat", price: 5400 }] },
-  { id: 8, name: "Cotton", nameHi: "कपास", emoji: "☁️", price: 6800, unit: "quintal", change24h: 3.2, mandi: "Rajkot", state: "Gujarat", category: "Cash Crops",
-    history: [{ date: "Mon", price: 6550 }, { date: "Tue", price: 6600 }, { date: "Wed", price: 6650 }, { date: "Thu", price: 6700 }, { date: "Fri", price: 6750 }, { date: "Sat", price: 6800 }] },
-  { id: 9, name: "Sugarcane", nameHi: "गन्ना", emoji: "🎋", price: 350, unit: "quintal", change24h: 0.0, mandi: "Lucknow", state: "Uttar Pradesh", category: "Cash Crops",
-    history: [{ date: "Mon", price: 350 }, { date: "Tue", price: 350 }, { date: "Wed", price: 350 }, { date: "Thu", price: 350 }, { date: "Fri", price: 350 }, { date: "Sat", price: 350 }] },
-  { id: 10, name: "Chickpea", nameHi: "चना", emoji: "🫛", price: 5600, unit: "quintal", change24h: 2.5, mandi: "Indore", state: "Madhya Pradesh", category: "Pulses",
-    history: [{ date: "Mon", price: 5450 }, { date: "Tue", price: 5480 }, { date: "Wed", price: 5500 }, { date: "Thu", price: 5530 }, { date: "Fri", price: 5560 }, { date: "Sat", price: 5600 }] },
-  { id: 11, name: "Turmeric", nameHi: "हल्दी", emoji: "🟡", price: 12500, unit: "quintal", change24h: 4.1, mandi: "Erode", state: "Tamil Nadu", category: "Spices",
-    history: [{ date: "Mon", price: 11900 }, { date: "Tue", price: 12000 }, { date: "Wed", price: 12100 }, { date: "Thu", price: 12200 }, { date: "Fri", price: 12350 }, { date: "Sat", price: 12500 }] },
-  { id: 12, name: "Green Chilli", nameHi: "हरी मिर्च", emoji: "🌶️", price: 3200, unit: "quintal", change24h: -6.5, mandi: "Guntur", state: "Andhra Pradesh", category: "Spices",
+  { id: 3, name: "Potato", nameHi: "आलू", emoji: "🥔", price: 1800, unit: "kg", change24h: -2.1, mandi: "Kolkata", state: "West Bengal", category: "Vegetables",
+    history: [{ date: "Mon", price: 1900 }, { date: "Tue", price: 1880 }, { date: "Wed", price: 1860 }, { date: "Thu", price: 1840 }, { date: "Fri", price: 1820 }, { date: "Sat", price: 1800 }] },
+  { id: 4, name: "Cabbage", nameHi: "पत्तागोभी", emoji: "🥬", price: 1200, unit: "kg", change24h: 3.4, mandi: "Bangalore", state: "Karnataka", category: "Vegetables",
+    history: [{ date: "Mon", price: 1100 }, { date: "Tue", price: 1120 }, { date: "Wed", price: 1150 }, { date: "Thu", price: 1170 }, { date: "Fri", price: 1190 }, { date: "Sat", price: 1200 }] },
+  { id: 5, name: "Carrot", nameHi: "गाजर", emoji: "🥕", price: 1600, unit: "kg", change24h: 1.8, mandi: "Pune", state: "Maharashtra", category: "Vegetables",
+    history: [{ date: "Mon", price: 1550 }, { date: "Tue", price: 1560 }, { date: "Wed", price: 1575 }, { date: "Thu", price: 1585 }, { date: "Fri", price: 1595 }, { date: "Sat", price: 1600 }] },
+  { id: 6, name: "Cucumber", nameHi: "ककड़ी", emoji: "🥒", price: 1400, unit: "kg", change24h: -4.2, mandi: "Chennai", state: "Tamil Nadu", category: "Vegetables",
+    history: [{ date: "Mon", price: 1500 }, { date: "Tue", price: 1480 }, { date: "Wed", price: 1460 }, { date: "Thu", price: 1440 }, { date: "Fri", price: 1420 }, { date: "Sat", price: 1400 }] },
+  { id: 7, name: "Brinjal", nameHi: "बैंगन", emoji: "🍆", price: 2200, unit: "kg", change24h: 6.1, mandi: "Hyderabad", state: "Telangana", category: "Vegetables",
+    history: [{ date: "Mon", price: 2000 }, { date: "Tue", price: 2050 }, { date: "Wed", price: 2100 }, { date: "Thu", price: 2150 }, { date: "Fri", price: 2175 }, { date: "Sat", price: 2200 }] },
+  { id: 8, name: "Capsicum", nameHi: "शिमला मिर्च", emoji: "🫑", price: 3200, unit: "kg", change24h: 7.3, mandi: "Mumbai", state: "Maharashtra", category: "Vegetables",
+    history: [{ date: "Mon", price: 2800 }, { date: "Tue", price: 2900 }, { date: "Wed", price: 3000 }, { date: "Thu", price: 3100 }, { date: "Fri", price: 3150 }, { date: "Sat", price: 3200 }] },
+  { id: 9, name: "Cauliflower", nameHi: "फूलगोभी", emoji: "🥦", price: 1500, unit: "kg", change24h: 2.5, mandi: "Jaipur", state: "Rajasthan", category: "Vegetables",
+    history: [{ date: "Mon", price: 1450 }, { date: "Tue", price: 1460 }, { date: "Wed", price: 1475 }, { date: "Thu", price: 1490 }, { date: "Fri", price: 1495 }, { date: "Sat", price: 1500 }] },
+  { id: 10, name: "Spinach", nameHi: "पालक", emoji: "🌿", price: 800, unit: "kg", change24h: -1.2, mandi: "Lucknow", state: "Uttar Pradesh", category: "Vegetables",
+    history: [{ date: "Mon", price: 820 }, { date: "Tue", price: 815 }, { date: "Wed", price: 810 }, { date: "Thu", price: 805 }, { date: "Fri", price: 802 }, { date: "Sat", price: 800 }] },
+  { id: 11, name: "Bottle Gourd", nameHi: "लौकी", emoji: "🍈", price: 1000, unit: "kg", change24h: -2.8, mandi: "Ahmedabad", state: "Gujarat", category: "Vegetables",
+    history: [{ date: "Mon", price: 1050 }, { date: "Tue", price: 1040 }, { date: "Wed", price: 1025 }, { date: "Thu", price: 1015 }, { date: "Fri", price: 1008 }, { date: "Sat", price: 1000 }] },
+  { id: 12, name: "Bitter Gourd", nameHi: "करेला", emoji: "🥒", price: 1800, unit: "kg", change24h: 4.6, mandi: "Indore", state: "Madhya Pradesh", category: "Vegetables",
+    history: [{ date: "Mon", price: 1700 }, { date: "Tue", price: 1720 }, { date: "Wed", price: 1750 }, { date: "Thu", price: 1775 }, { date: "Fri", price: 1790 }, { date: "Sat", price: 1800 }] },
+  // Cereals
+  { id: 13, name: "Wheat", nameHi: "गेहूँ", emoji: "🌾", price: 2650, unit: "quintal", change24h: 2.1, mandi: "Delhi", state: "Delhi", category: "Cereals",
+    history: [{ date: "Mon", price: 2580 }, { date: "Tue", price: 2600 }, { date: "Wed", price: 2620 }, { date: "Thu", price: 2610 }, { date: "Fri", price: 2640 }, { date: "Sat", price: 2650 }] },
+  { id: 14, name: "Rice", nameHi: "चावल", emoji: "🍚", price: 4200, unit: "quintal", change24h: -1.3, mandi: "Karnal", state: "Haryana", category: "Cereals",
+    history: [{ date: "Mon", price: 4300 }, { date: "Tue", price: 4280 }, { date: "Wed", price: 4250 }, { date: "Thu", price: 4230 }, { date: "Fri", price: 4210 }, { date: "Sat", price: 4200 }] },
+  // Spices
+  { id: 15, name: "Green Chilli", nameHi: "हरी मिर्च", emoji: "🌶️", price: 3200, unit: "kg", change24h: -6.5, mandi: "Guntur", state: "Andhra Pradesh", category: "Spices",
     history: [{ date: "Mon", price: 3500 }, { date: "Tue", price: 3450 }, { date: "Wed", price: 3400 }, { date: "Thu", price: 3350 }, { date: "Fri", price: 3280 }, { date: "Sat", price: 3200 }] },
+  { id: 16, name: "Turmeric", nameHi: "हल्दी", emoji: "🟡", price: 12500, unit: "quintal", change24h: 4.1, mandi: "Erode", state: "Tamil Nadu", category: "Spices",
+    history: [{ date: "Mon", price: 11900 }, { date: "Tue", price: 12000 }, { date: "Wed", price: 12100 }, { date: "Thu", price: 12200 }, { date: "Fri", price: 12350 }, { date: "Sat", price: 12500 }] },
+  // Pulses
+  { id: 17, name: "Chickpea", nameHi: "चना", emoji: "🫛", price: 5600, unit: "quintal", change24h: 2.5, mandi: "Indore", state: "Madhya Pradesh", category: "Pulses",
+    history: [{ date: "Mon", price: 5450 }, { date: "Tue", price: 5480 }, { date: "Wed", price: 5500 }, { date: "Thu", price: 5530 }, { date: "Fri", price: 5560 }, { date: "Sat", price: 5600 }] },
+  // Oilseeds
+  { id: 18, name: "Soybean", nameHi: "सोयाबीन", emoji: "🫘", price: 4800, unit: "quintal", change24h: 1.4, mandi: "Indore", state: "Madhya Pradesh", category: "Oilseeds",
+    history: [{ date: "Mon", price: 4700 }, { date: "Tue", price: 4720 }, { date: "Wed", price: 4740 }, { date: "Thu", price: 4760 }, { date: "Fri", price: 4780 }, { date: "Sat", price: 4800 }] },
+  // More demo vegetables
+  { id: 19, name: "Okra", nameHi: "भिंडी", emoji: "🫛", price: 2100, unit: "kg", change24h: 3.1, mandi: "Surat", state: "Gujarat", category: "Vegetables",
+    history: [{ date: "Mon", price: 1980 }, { date: "Tue", price: 2010 }, { date: "Wed", price: 2040 }, { date: "Thu", price: 2070 }, { date: "Fri", price: 2090 }, { date: "Sat", price: 2100 }] },
+  { id: 20, name: "Radish", nameHi: "मूली", emoji: "🥕", price: 900, unit: "kg", change24h: -1.8, mandi: "Agra", state: "Uttar Pradesh", category: "Vegetables",
+    history: [{ date: "Mon", price: 940 }, { date: "Tue", price: 930 }, { date: "Wed", price: 925 }, { date: "Thu", price: 915 }, { date: "Fri", price: 905 }, { date: "Sat", price: 900 }] },
+  { id: 21, name: "Beetroot", nameHi: "चुकंदर", emoji: "🍠", price: 1700, unit: "kg", change24h: 2.2, mandi: "Nashik", state: "Maharashtra", category: "Vegetables",
+    history: [{ date: "Mon", price: 1620 }, { date: "Tue", price: 1640 }, { date: "Wed", price: 1660 }, { date: "Thu", price: 1680 }, { date: "Fri", price: 1690 }, { date: "Sat", price: 1700 }] },
+  { id: 22, name: "Pumpkin", nameHi: "कद्दू", emoji: "🎃", price: 1300, unit: "kg", change24h: 1.5, mandi: "Kanpur", state: "Uttar Pradesh", category: "Vegetables",
+    history: [{ date: "Mon", price: 1240 }, { date: "Tue", price: 1255 }, { date: "Wed", price: 1270 }, { date: "Thu", price: 1285 }, { date: "Fri", price: 1290 }, { date: "Sat", price: 1300 }] },
+  { id: 23, name: "Ridge Gourd", nameHi: "तुरई", emoji: "🥒", price: 1500, unit: "kg", change24h: -0.9, mandi: "Patna", state: "Bihar", category: "Vegetables",
+    history: [{ date: "Mon", price: 1540 }, { date: "Tue", price: 1530 }, { date: "Wed", price: 1520 }, { date: "Thu", price: 1510 }, { date: "Fri", price: 1505 }, { date: "Sat", price: 1500 }] },
+  { id: 24, name: "Drumstick", nameHi: "सहजन", emoji: "🌿", price: 2600, unit: "kg", change24h: 4.7, mandi: "Madurai", state: "Tamil Nadu", category: "Vegetables",
+    history: [{ date: "Mon", price: 2350 }, { date: "Tue", price: 2400 }, { date: "Wed", price: 2475 }, { date: "Thu", price: 2520 }, { date: "Fri", price: 2570 }, { date: "Sat", price: 2600 }] },
+  { id: 25, name: "Coriander", nameHi: "धनिया", emoji: "🌿", price: 1100, unit: "kg", change24h: 2.9, mandi: "Bhopal", state: "Madhya Pradesh", category: "Vegetables",
+    history: [{ date: "Mon", price: 1030 }, { date: "Tue", price: 1050 }, { date: "Wed", price: 1065 }, { date: "Thu", price: 1080 }, { date: "Fri", price: 1090 }, { date: "Sat", price: 1100 }] },
+  { id: 26, name: "Green Peas", nameHi: "हरी मटर", emoji: "🫛", price: 2300, unit: "kg", change24h: -3.3, mandi: "Shimla", state: "Himachal Pradesh", category: "Vegetables",
+    history: [{ date: "Mon", price: 2500 }, { date: "Tue", price: 2460 }, { date: "Wed", price: 2420 }, { date: "Thu", price: 2380 }, { date: "Fri", price: 2340 }, { date: "Sat", price: 2300 }] },
+  { id: 27, name: "Garlic", nameHi: "लहसुन", emoji: "🧄", price: 4200, unit: "kg", change24h: 5.6, mandi: "Mandsaur", state: "Madhya Pradesh", category: "Vegetables",
+    history: [{ date: "Mon", price: 3900 }, { date: "Tue", price: 3980 }, { date: "Wed", price: 4040 }, { date: "Thu", price: 4100 }, { date: "Fri", price: 4160 }, { date: "Sat", price: 4200 }] },
+  { id: 28, name: "Ginger", nameHi: "अदरक", emoji: "🫚", price: 3800, unit: "kg", change24h: 3.8, mandi: "Kochi", state: "Kerala", category: "Vegetables",
+    history: [{ date: "Mon", price: 3520 }, { date: "Tue", price: 3580 }, { date: "Wed", price: 3640 }, { date: "Thu", price: 3700 }, { date: "Fri", price: 3750 }, { date: "Sat", price: 3800 }] },
+  { id: 29, name: "Fenugreek Leaves", nameHi: "मेथी", emoji: "🌿", price: 1250, unit: "kg", change24h: -2.4, mandi: "Nagpur", state: "Maharashtra", category: "Vegetables",
+    history: [{ date: "Mon", price: 1320 }, { date: "Tue", price: 1300 }, { date: "Wed", price: 1285 }, { date: "Thu", price: 1270 }, { date: "Fri", price: 1260 }, { date: "Sat", price: 1250 }] },
+  { id: 30, name: "Pointed Gourd", nameHi: "परवल", emoji: "🥒", price: 1950, unit: "kg", change24h: 1.1, mandi: "Varanasi", state: "Uttar Pradesh", category: "Vegetables",
+    history: [{ date: "Mon", price: 1890 }, { date: "Tue", price: 1900 }, { date: "Wed", price: 1915 }, { date: "Thu", price: 1930 }, { date: "Fri", price: 1940 }, { date: "Sat", price: 1950 }] },
+  { id: 31, name: "Turnip", nameHi: "शलजम", emoji: "🥔", price: 1150, unit: "kg", change24h: 0.7, mandi: "Dehradun", state: "Uttarakhand", category: "Vegetables",
+    history: [{ date: "Mon", price: 1110 }, { date: "Tue", price: 1120 }, { date: "Wed", price: 1130 }, { date: "Thu", price: 1135 }, { date: "Fri", price: 1140 }, { date: "Sat", price: 1150 }] },
+  { id: 32, name: "Sweet Corn", nameHi: "मीठा मक्का", emoji: "🌽", price: 1850, unit: "kg", change24h: 2.6, mandi: "Mysore", state: "Karnataka", category: "Vegetables",
+    history: [{ date: "Mon", price: 1740 }, { date: "Tue", price: 1760 }, { date: "Wed", price: 1785 }, { date: "Thu", price: 1810 }, { date: "Fri", price: 1830 }, { date: "Sat", price: 1850 }] },
 ];
 
 const categories = ["All", "Cereals", "Vegetables", "Oilseeds", "Cash Crops", "Pulses", "Spices"];
@@ -201,219 +247,177 @@ export default function MarketPrices() {
 
   return (
     <>
-      <div className="mb-6">
-        <div className="flex items-center gap-3 mb-2">
-          <h1 className="text-2xl font-heading font-bold text-foreground">📊 Market Prices</h1>
+      <div className="mb-8">
+        <div className="flex items-end justify-between mb-2">
+          <div>
+            <h1 className="text-4xl font-heading font-bold text-black">
+              🌱 Market Prices
+            </h1>
+            <p className="text-sm text-muted-foreground mt-2">
+              Real-time commodity prices from across India's mandis
+            </p>
+          </div>
           {!apiRecords || apiRecords.length === 0 ? (
-            <span className="text-xs bg-yellow-500/10 text-yellow-700 px-2 py-1 rounded-full border border-yellow-500/20">
-              Demo Prices
+            <span className="text-xs bg-yellow-500/10 text-yellow-700 px-3 py-1 rounded-full border border-yellow-500/20 font-medium">
+              Demo Data
             </span>
           ) : (
-            <span className="text-xs bg-green-500/10 text-green-700 px-2 py-1 rounded-full border border-green-500/20">
-              Live Data
+            <span className="text-xs bg-green-500/10 text-green-700 px-3 py-1 rounded-full border border-green-500/20 font-medium">
+              ✓ Live
             </span>
           )}
         </div>
-        <p className="text-sm text-muted-foreground mt-1">
-          {!apiRecords || apiRecords.length === 0 
-            ? "Demo prices - Real-time API data will appear here"
-            : "Live mandi prices across India"}
-        </p>
       </div>
 
       {isLoading && (
-        <div className="flex items-center gap-2 text-xs text-primary mb-4 animate-pulse">
-          <Loader2 className="w-3 h-3 animate-spin" />
-          Loading live prices from Mandi APIs...
-        </div>
-      )}
-
-      {isFetching && !isLoading && (
-        <div className="flex items-center gap-2 text-xs text-success mb-4 animate-pulse">
-          <Loader2 className="w-3 h-3 animate-spin" />
-          Updating live prices...
-        </div>
-      )}
-
-      {/* Ticker */}
-      <div className="glass-card rounded-xl px-4 py-2 mb-6 overflow-hidden">
-        <div className="flex animate-marquee whitespace-nowrap">
-          {[...tickerItems, ...tickerItems].map((item, i) => (
-            <span key={i} className="text-xs font-numbers text-muted-foreground mx-6">{item}</span>
-          ))}
-        </div>
-      </div>
-
-      {/* Search & Filters */}
-      <div className="flex flex-col sm:flex-row gap-3 mb-6">
-        <div className="relative flex-1">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-          <Input 
-            placeholder="Search by crop or state..." 
-            className="pl-10" 
-            value={search} 
-            onChange={(e) => setSearch(e.target.value)} 
-          />
-        </div>
-        <div className="flex gap-2 overflow-x-auto pb-1">
-          {categories.map((cat) => (
-            <Button
-              key={cat}
-              variant={category === cat ? "default" : "outline"}
-              size="sm"
-              onClick={() => setCategory(cat)}
-              className="shrink-0"
-            >
-              {cat}
-            </Button>
-          ))}
-        </div>
-      </div>
-
-      <div className="grid lg:grid-cols-3 gap-6">
-        {/* Price Cards */}
-        <div className="lg:col-span-2 space-y-3">
-          <div className="flex items-center gap-2 mb-2">
-            <Filter className="w-4 h-4 text-muted-foreground" />
-            <span className="text-xs text-muted-foreground">Sort by:</span>
-            {(["change", "price", "name"] as const).map((s) => (
-              <button
-                key={s}
-                onClick={() => setSortBy(s)}
-                className={`text-xs px-2 py-1 rounded-md ${sortBy === s ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:bg-muted"}`}
-              >
-                {s === "change" ? "Trending" : s === "price" ? "Price" : "Name"}
-              </button>
-            ))}
+        <div className="flex items-center justify-center py-12">
+          <div className="flex flex-col items-center gap-3">
+            <Loader2 className="w-8 h-8 animate-spin text-primary" />
+            <p className="text-sm text-muted-foreground">Loading market data...</p>
           </div>
-
-          {filtered.map((crop, i) => (
-            <motion.div
-              key={crop.id}
-              initial={{ opacity: 0, y: 10 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: i * 0.03 }}
-              onClick={() => setSelectedCrop(crop)}
-              className={`glass-card-hover rounded-xl p-4 cursor-pointer border-2 transition-colors ${
-                selectedCrop?.id === crop.id ? "border-primary" : "border-transparent"
-              }`}
-            >
-              <div className="flex items-center gap-4">
-                <span className="text-3xl">{crop.emoji}</span>
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2">
-                    <h3 className="font-heading font-semibold text-foreground">{crop.name}</h3>
-                    <span className="text-xs text-muted-foreground">{crop.nameHi}</span>
-                  </div>
-                  <div className="flex items-center gap-2 text-xs text-muted-foreground mt-0.5">
-                    <MapPin className="w-3 h-3" /> {crop.mandi}, {crop.state}
-                  </div>
-                </div>
-                {/* Mini spark chart */}
-                <div className="w-20 h-8 hidden sm:block">
-                  <ResponsiveContainer width="100%" height="100%">
-                    <LineChart data={crop.history}>
-                      <Line
-                        type="monotone"
-                        dataKey="price"
-                        stroke={crop.change24h >= 0 ? "hsl(var(--success))" : "hsl(var(--destructive))"}
-                        strokeWidth={1.5}
-                        dot={false}
-                      />
-                    </LineChart>
-                  </ResponsiveContainer>
-                </div>
-                <div className="text-right">
-                  <p className="font-numbers font-bold text-foreground">₹{crop.price.toLocaleString()}</p>
-                  <p className="text-xs text-muted-foreground">/{crop.unit}</p>
-                </div>
-                <div className={`flex items-center gap-0.5 text-sm font-numbers font-medium ${crop.change24h > 0 ? "text-success" : crop.change24h < 0 ? "text-destructive" : "text-muted-foreground"}`}>
-                  {crop.change24h > 0 ? <ArrowUpRight className="w-4 h-4" /> : crop.change24h < 0 ? <ArrowDownRight className="w-4 h-4" /> : null}
-                  {crop.change24h > 0 ? "+" : ""}{crop.change24h}%
-                </div>
-              </div>
-            </motion.div>
-          ))}
         </div>
+      )}
 
-        {/* Detail Panel */}
-        <div className="space-y-4">
-          {selectedCrop ? (
-            <motion.div
-              key={selectedCrop.id}
-              initial={{ opacity: 0, y: 10 }}
-              animate={{ opacity: 1, y: 0 }}
-              className="glass-card rounded-2xl p-5"
-            >
-              <div className="flex items-center gap-3 mb-4">
-                <span className="text-4xl">{selectedCrop.emoji}</span>
-                <div>
-                  <h3 className="font-heading font-bold text-lg text-foreground">{selectedCrop.name}</h3>
-                  <p className="text-xs text-muted-foreground">{selectedCrop.mandi}, {selectedCrop.state}</p>
-                </div>
+      {!isLoading && (
+        <>
+          {/* Ticker */}
+          {tickerItems.length > 0 && (
+            <div className="glass-card rounded-2xl px-5 py-3 mb-8 overflow-hidden border border-border/50">
+              <div className="flex animate-marquee whitespace-nowrap">
+                {[...tickerItems, ...tickerItems].map((item, i) => (
+                  <span key={i} className="text-sm font-medium text-muted-foreground mx-8">{item}</span>
+                ))}
               </div>
-
-              <div className="mb-4">
-                <p className="text-sm text-muted-foreground">Current Price</p>
-                <div className="flex items-end gap-2">
-                  <span className="font-numbers text-3xl font-bold text-foreground">₹{selectedCrop.price.toLocaleString()}</span>
-                  <span className="text-sm text-muted-foreground pb-1">/{selectedCrop.unit}</span>
-                </div>
-                <span className={`text-sm font-numbers font-medium ${selectedCrop.change24h > 0 ? "text-success" : selectedCrop.change24h < 0 ? "text-destructive" : "text-muted-foreground"}`}>
-                  {selectedCrop.change24h > 0 ? "+" : ""}{selectedCrop.change24h}% (24h)
-                </span>
-              </div>
-
-              {/* Chart */}
-              <div className="h-48 mb-4">
-                <ResponsiveContainer width="100%" height="100%">
-                  <LineChart data={selectedCrop.history}>
-                    <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
-                    <XAxis dataKey="date" tick={{ fontSize: 11 }} stroke="hsl(var(--muted-foreground))" />
-                    <YAxis tick={{ fontSize: 11 }} stroke="hsl(var(--muted-foreground))" domain={["dataMin - 50", "dataMax + 50"]} />
-                    <Tooltip
-                      contentStyle={{ background: "hsl(var(--card))", border: "1px solid hsl(var(--border))", borderRadius: 8, fontSize: 12 }}
-                      formatter={(value: number) => [`₹${value}`, "Price"]}
-                    />
-                    <Line type="monotone" dataKey="price" stroke="hsl(var(--primary))" strokeWidth={2} dot={{ r: 3 }} />
-                  </LineChart>
-                </ResponsiveContainer>
-              </div>
-
-              <div className="space-y-2 text-sm">
-                <div className="flex justify-between"><span className="text-muted-foreground">Category</span><span className="text-foreground">{selectedCrop.category}</span></div>
-                <div className="flex justify-between"><span className="text-muted-foreground">MSP Status</span><span className="text-success">Available</span></div>
-                <div className="flex justify-between"><span className="text-muted-foreground">Trading Volume</span><span className="text-foreground font-numbers">12,450 qtl</span></div>
-              </div>
-            </motion.div>
-          ) : (
-            <div className="glass-card rounded-2xl p-6 text-center">
-              <BarChart3 className="w-8 h-8 text-muted-foreground mx-auto mb-3" />
-              <p className="text-sm text-muted-foreground">Select a crop to view detailed price analysis</p>
             </div>
           )}
 
-          {/* Top Gainers/Losers */}
-          <div className="glass-card rounded-2xl p-5">
-            <h3 className="font-heading font-semibold text-foreground mb-3">Top Movers (24h)</h3>
-            <div className="space-y-2">
-              {[...crops].sort((a, b) => b.change24h - a.change24h).slice(0, 3).map((c) => (
-                <div key={c.id} className="flex items-center justify-between text-sm">
-                  <span className="flex items-center gap-2">{c.emoji} {c.name}</span>
-                  <span className="text-success font-numbers">+{c.change24h}%</span>
-                </div>
-              ))}
-              <div className="border-t border-border my-2" />
-              {[...crops].sort((a, b) => a.change24h - b.change24h).slice(0, 3).map((c) => (
-                <div key={c.id} className="flex items-center justify-between text-sm">
-                  <span className="flex items-center gap-2">{c.emoji} {c.name}</span>
-                  <span className="text-destructive font-numbers">{c.change24h}%</span>
-                </div>
+          {/* Search & Filters */}
+          <div className="flex flex-col sm:flex-row gap-3 mb-8">
+            <div className="relative flex-1">
+              <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
+              <Input 
+                placeholder="Search by crop, state, or mandi..." 
+                className="pl-12 h-11 rounded-xl border-2 border-border/50 focus:border-primary transition-colors text-base" 
+                value={search} 
+                onChange={(e) => setSearch(e.target.value)} 
+              />
+            </div>
+          </div>
+
+          {/* Category Filter Chips */}
+          <div className="flex gap-2 overflow-x-auto pb-4 mb-8 -mx-4 px-4">
+            {categories.map((cat) => (
+              <motion.button
+                key={cat}
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.95 }}
+                onClick={() => setCategory(cat)}
+                className={`px-5 py-2.5 rounded-full font-medium whitespace-nowrap transition-all duration-200 ${
+                  category === cat
+                    ? "bg-gradient-to-r from-green-500 to-emerald-500 text-white shadow-lg shadow-green-500/25"
+                    : "bg-muted/50 text-muted-foreground hover:bg-muted border border-border/50"
+                }`}
+              >
+                {cat}
+              </motion.button>
+            ))}
+          </div>
+
+          {/* Sort Options */}
+          <div className="flex items-center gap-3 mb-6 px-1">
+            <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Sort by:</span>
+            <div className="flex gap-2">
+              {(["change", "price", "name"] as const).map((s) => (
+                <motion.button
+                  key={s}
+                  whileHover={{ scale: 1.05 }}
+                  onClick={() => setSortBy(s)}
+                  className={`text-xs font-medium px-3 py-1.5 rounded-lg transition-all ${
+                    sortBy === s 
+                      ? "bg-primary text-primary-foreground" 
+                      : "text-muted-foreground hover:bg-muted border border-border/30"
+                  }`}
+                >
+                  {s === "change" ? "📈 Trending" : s === "price" ? "💰 Price" : "🔤 Name"}
+                </motion.button>
               ))}
             </div>
           </div>
-        </div>
-      </div>
+
+          {/* Grid of Price Cards */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 mb-8">
+            {filtered.map((crop, i) => (
+              <motion.div
+                key={crop.id}
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: i * 0.04, duration: 0.3 }}
+                onClick={() => setSelectedCrop(crop)}
+                className={`group relative cursor-pointer rounded-2xl p-5 border-2 transition-all duration-300 overflow-hidden
+                  ${selectedCrop?.id === crop.id 
+                    ? "border-primary bg-primary/5 shadow-lg shadow-primary/20" 
+                    : "border-border/30 bg-card/50 hover:border-primary/50 hover:shadow-lg hover:shadow-primary/10"
+                  }`}
+              >
+                {/* Background gradient */}
+                <div className="absolute inset-0 bg-gradient-to-br from-primary/5 to-primary/0 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+                
+                <div className="relative z-10">
+                  {/* Emoji and Category Badge */}
+                  <div className="flex items-start justify-between mb-3">
+                    <span className="text-4xl">{crop.emoji}</span>
+                    <span className="text-xs font-semibold px-2.5 py-1 rounded-full bg-primary/10 text-primary">
+                      {crop.category}
+                    </span>
+                  </div>
+
+                  {/* Name */}
+                  <h3 className="font-heading font-bold text-foreground mb-1 text-lg line-clamp-1">
+                    {crop.name}
+                  </h3>
+
+                  {/* Location */}
+                  <div className="flex items-center gap-1.5 mb-4 text-xs text-muted-foreground">
+                    <MapPin className="w-3.5 h-3.5 flex-shrink-0" />
+                    <span className="truncate">{crop.mandi}, {crop.state}</span>
+                  </div>
+
+                  {/* Price Section */}
+                  <div className="flex items-end gap-2 mb-3">
+                    <div className="flex-1">
+                      <p className="text-xs text-muted-foreground mb-1">Price</p>
+                      <p className="font-numbers font-bold text-2xl text-foreground">₹{crop.price.toLocaleString()}</p>
+                    </div>
+                    <div className="text-right">
+                      <p className="text-xs text-muted-foreground mb-1">{crop.unit}</p>
+                    </div>
+                  </div>
+
+                  {/* Change indicator */}
+                  <div className={`flex items-center gap-1.5 font-numbers font-semibold text-sm py-2 px-3 rounded-lg ${
+                    crop.change24h > 0 
+                      ? "bg-green-500/10 text-green-700" 
+                      : crop.change24h < 0 
+                      ? "bg-red-500/10 text-red-700"
+                      : "bg-gray-500/10 text-gray-700"
+                  }`}>
+                    {crop.change24h > 0 ? <TrendingUp className="w-4 h-4" /> : crop.change24h < 0 ? <TrendingDown className="w-4 h-4" /> : null}
+                    <span>{crop.change24h > 0 ? "+" : ""}{crop.change24h}% (24h)</span>
+                  </div>
+                </div>
+              </motion.div>
+            ))}
+          </div>
+
+          {filtered.length === 0 && (
+            <div className="flex flex-col items-center justify-center py-16">
+              <Search className="w-16 h-16 text-muted-foreground/30 mb-4" />
+              <p className="text-lg font-semibold text-foreground mb-2">No crops found</p>
+              <p className="text-sm text-muted-foreground">Try adjusting your search or filter</p>
+            </div>
+          )}
+        </>
+      )}
     </>
   );
 }

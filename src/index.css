@@ -199,7 +199,7 @@
 }
 
 .animate-marquee {
-  animation: marquee 30s linear infinite;
+  animation: marquee 55s linear infinite;
 }
 
 /* Handwriting cursor blink */
