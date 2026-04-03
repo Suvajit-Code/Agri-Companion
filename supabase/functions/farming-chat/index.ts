@@ -31,6 +31,75 @@ Guidelines:
 - Keep responses focused and farmer-friendly
 - If unsure, say so rather than guessing`;
 
+type IncomingContentPart =
+  | { type?: string; text?: string }
+  | { type?: string; image_url?: { url?: string } }
+  | {
+      type?: string;
+      source?: {
+        type?: string;
+        media_type?: string;
+        data?: string;
+      };
+    };
+
+type IncomingMessage = {
+  role?: string;
+  content?: string | IncomingContentPart[];
+};
+
+function normalizeMessages(input: unknown): Array<{ role: "user" | "assistant" | "system"; content: string | Array<{ type: "text"; text: string } | { type: "image_url"; image_url: { url: string } }> }> {
+  if (!Array.isArray(input)) return [];
+
+  return input
+    .map((message): { role: "user" | "assistant" | "system"; content: string | Array<{ type: "text"; text: string } | { type: "image_url"; image_url: { url: string } }> } | null => {
+      const m = message as IncomingMessage;
+      const role = m.role === "assistant" || m.role === "system" ? m.role : "user";
+
+      if (typeof m.content === "string") {
+        return { role, content: m.content };
+      }
+
+      if (!Array.isArray(m.content)) {
+        return { role, content: "" };
+      }
+
+      const normalizedParts: Array<{ type: "text"; text: string } | { type: "image_url"; image_url: { url: string } }> = [];
+
+      for (const part of m.content) {
+        const p = part as IncomingContentPart;
+        if (p.type === "text" && typeof p.text === "string" && p.text.trim()) {
+          normalizedParts.push({ type: "text", text: p.text });
+          continue;
+        }
+
+        if (p.type === "image_url" && typeof p.image_url?.url === "string" && p.image_url.url.trim()) {
+          normalizedParts.push({ type: "image_url", image_url: { url: p.image_url.url } });
+          continue;
+        }
+
+        if (p.type === "image" && p.source?.type === "base64" && typeof p.source?.data === "string" && p.source.data.trim()) {
+          const mediaType = p.source.media_type || "image/jpeg";
+          normalizedParts.push({
+            type: "image_url",
+            image_url: { url: `data:${mediaType};base64,${p.source.data}` },
+          });
+        }
+      }
+
+      if (normalizedParts.length === 0) {
+        return { role, content: "" };
+      }
+
+      return { role, content: normalizedParts };
+    })
+    .filter((m): m is { role: "user" | "assistant" | "system"; content: string | Array<{ type: "text"; text: string } | { type: "image_url"; image_url: { url: string } }> } => {
+      if (!m) return false;
+      if (typeof m.content === "string") return m.content.trim().length > 0;
+      return m.content.length > 0;
+    });
+}
+
 Deno.serve(async (req: Request) => {
   // Handle CORS preflight requests
   if (req.method === "OPTIONS") {
@@ -39,7 +108,17 @@ Deno.serve(async (req: Request) => {
 
   try {
     const { messages } = await req.json();
+    const normalizedMessages = normalizeMessages(messages);
+
+    if (normalizedMessages.length === 0) {
+      return new Response(
+        JSON.stringify({ error: "No valid messages were provided" }),
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
     const KRISHIGROW_API_KEY = Deno.env.get("KRISHIGROW_API_KEY") || Deno.env.get("LOVABLE_API_KEY");
+    const KRISHIGROW_MODEL = Deno.env.get("KRISHIGROW_MODEL") || "google/gemini-2.5-flash";
     if (!KRISHIGROW_API_KEY) throw new Error("KRISHIGROW_API_KEY is not configured");
 
     const response = await fetch(
@@ -51,10 +130,10 @@ Deno.serve(async (req: Request) => {
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          model: "google/gemini-3-flash-preview",
+          model: KRISHIGROW_MODEL,
           messages: [
             { role: "system", content: SYSTEM_PROMPT },
-            ...messages,
+            ...normalizedMessages,
           ],
           stream: true,
         }),

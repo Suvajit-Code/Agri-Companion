@@ -8,6 +8,7 @@ type Msg = { role: "user" | "assistant"; content: string };
 const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL;
 const SUPABASE_PUBLISHABLE_KEY = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY || import.meta.env.VITE_SUPABASE_ANON_KEY;
 const CHAT_URL = SUPABASE_URL ? `${SUPABASE_URL}/functions/v1/farming-chat` : "";
+const USE_EDGE_FUNCTION = import.meta.env.VITE_USE_EDGE_FUNCTION === "true";
 const GROQ_API_KEY = import.meta.env.VITE_GROQ_API_KEY;
 const GROQ_URL = "https://api.groq.com/openai/v1/chat/completions";
 const GROQ_MODEL = import.meta.env.VITE_GROQ_MODEL || "llama-3.3-70b-versatile";
@@ -56,7 +57,7 @@ export default function FloatingChatbot() {
       let reply = "";
 
       // Primary path for production: Supabase Edge Function
-      if (CHAT_URL && SUPABASE_PUBLISHABLE_KEY) {
+      if (USE_EDGE_FUNCTION && CHAT_URL && SUPABASE_PUBLISHABLE_KEY) {
         try {
           const edgeResp = await fetch(CHAT_URL, {
             method: "POST",

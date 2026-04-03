@@ -5,6 +5,31 @@ import type { Database } from './types';
 const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL;
 const SUPABASE_PUBLISHABLE_KEY = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY || import.meta.env.VITE_SUPABASE_ANON_KEY;
 
+function clearBrokenAuthToken() {
+  if (typeof window === 'undefined') return;
+
+  try {
+    const host = new URL(SUPABASE_URL).host;
+    const projectRef = host.split('.')[0];
+    const authKey = `sb-${projectRef}-auth-token`;
+    const raw = localStorage.getItem(authKey);
+    if (!raw) return;
+
+    const parsed = JSON.parse(raw);
+    const refreshToken = parsed?.refresh_token || parsed?.currentSession?.refresh_token;
+    if (!refreshToken || typeof refreshToken !== 'string') {
+      localStorage.removeItem(authKey);
+    }
+  } catch {
+    // If token JSON or URL parsing is invalid, clear old auth entries to recover.
+    Object.keys(localStorage)
+      .filter((key) => key.startsWith('sb-') && key.endsWith('-auth-token'))
+      .forEach((key) => localStorage.removeItem(key));
+  }
+}
+
+clearBrokenAuthToken();
+
 // Import the supabase client like this:
 // import { supabase } from "@/integrations/supabase/client";
 
