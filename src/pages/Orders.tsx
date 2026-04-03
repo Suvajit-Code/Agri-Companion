@@ -22,7 +22,6 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
 import { jsPDF } from "jspdf";
-import logo from "@/assets/logo.jpg";
 
 type OrderStatus = "pending" | "confirmed" | "shipped" | "delivered" | "cancelled";
 
@@ -45,41 +44,44 @@ const statusConfig: Record<
   OrderStatus,
   { label: string; icon: React.ElementType; color: string }
 > = {
-  pending: { label: "Pending", icon: Clock, color: "bg-warning/15 text-warning" },
+  pending:   { label: "Pending",   icon: Clock,        color: "bg-warning/15 text-warning" },
   confirmed: { label: "Confirmed", icon: CheckCircle2, color: "bg-info/15 text-info" },
-  shipped: { label: "Shipped", icon: Truck, color: "bg-accent/15 text-accent-foreground" },
+  shipped:   { label: "Shipped",   icon: Truck,        color: "bg-accent/15 text-accent-foreground" },
   delivered: { label: "Delivered", icon: CheckCircle2, color: "bg-success/15 text-success" },
-  cancelled: { label: "Cancelled", icon: XCircle, color: "bg-destructive/15 text-destructive" },
+  cancelled: { label: "Cancelled", icon: XCircle,      color: "bg-destructive/15 text-destructive" },
 };
 
 const paymentStatusConfig: Record<string, { label: string; color: string }> = {
-  paid: { label: "Paid", color: "bg-success/15 text-success" },
+  paid:    { label: "Paid",   color: "bg-success/15 text-success" },
   pending: { label: "Unpaid", color: "bg-warning/15 text-warning" },
-  cod: { label: "COD", color: "bg-info/15 text-info" },
+  cod:     { label: "COD",    color: "bg-info/15 text-info" },
 };
 
 const progressSteps: { status: OrderStatus; label: string }[] = [
-  { status: "pending", label: "Ordered" },
+  { status: "pending",   label: "Ordered"   },
   { status: "confirmed", label: "Confirmed" },
-  { status: "shipped", label: "Shipped" },
+  { status: "shipped",   label: "Shipped"   },
   { status: "delivered", label: "Delivered" },
 ];
 
 const mySales: Order[] = [
-  { id: "SL-2048", rawId: "SL-2048", item: "Premium Basmati Rice", category: "Grain", quantity: "200 qtl", total: 420000, date: "2026-02-11", status: "confirmed", counterparty: "Delhi Grain Market", location: "New Delhi", paymentStatus: "pending" },
-  { id: "SL-2041", rawId: "SL-2041", item: "Fresh Onions (Grade A)", category: "Vegetable", quantity: "50 qtl", total: 87500, date: "2026-02-08", status: "shipped", counterparty: "Metro Fresh Pvt Ltd", location: "Mumbai, MH", trackingId: "TRK77234", paymentStatus: "paid" },
-  { id: "SL-2055", rawId: "SL-2055", item: "Organic Turmeric Powder", category: "Spice", quantity: "10 qtl", total: 95000, date: "2026-02-12", status: "pending", counterparty: "SpiceWorld Exports", location: "Kochi, KL", paymentStatus: "pending" },
-  { id: "SL-2033", rawId: "SL-2033", item: "Soybean (FAQ Grade)", category: "Grain", quantity: "100 qtl", total: 450000, date: "2026-02-03", status: "delivered", counterparty: "Agri Commodities Ltd", location: "Indore, MP", paymentStatus: "paid" },
-  { id: "SL-2028", rawId: "SL-2028", item: "Cotton Bales", category: "Fiber", quantity: "30 bales", total: 180000, date: "2026-01-25", status: "delivered", counterparty: "Textile Hub", location: "Ahmedabad, GJ", paymentStatus: "paid" },
+  { id: "SL-2048", rawId: "SL-2048", item: "Premium Basmati Rice",    category: "Grain",     quantity: "200 qtl",  total: 420000, date: "2026-02-11", status: "confirmed", counterparty: "Delhi Grain Market",     location: "New Delhi",      paymentStatus: "pending" },
+  { id: "SL-2041", rawId: "SL-2041", item: "Fresh Onions (Grade A)",  category: "Vegetable", quantity: "50 qtl",   total: 87500,  date: "2026-02-08", status: "shipped",   counterparty: "Metro Fresh Pvt Ltd",    location: "Mumbai, MH",     trackingId: "TRK77234", paymentStatus: "paid" },
+  { id: "SL-2055", rawId: "SL-2055", item: "Organic Turmeric Powder", category: "Spice",     quantity: "10 qtl",   total: 95000,  date: "2026-02-12", status: "pending",   counterparty: "SpiceWorld Exports",     location: "Kochi, KL",      paymentStatus: "pending" },
+  { id: "SL-2033", rawId: "SL-2033", item: "Soybean (FAQ Grade)",     category: "Grain",     quantity: "100 qtl",  total: 450000, date: "2026-02-03", status: "delivered", counterparty: "Agri Commodities Ltd",   location: "Indore, MP",     paymentStatus: "paid" },
+  { id: "SL-2028", rawId: "SL-2028", item: "Cotton Bales",            category: "Fiber",     quantity: "30 bales", total: 180000, date: "2026-01-25", status: "delivered", counterparty: "Textile Hub",            location: "Ahmedabad, GJ",  paymentStatus: "paid" },
 ];
 
 const summaryStats = [
-  { icon: ShoppingCart, label: "Total Orders", value: "24", change: "+3 this month", color: "text-info" },
-  { icon: TrendingUp, label: "Total Sales", value: "₹12.3L", change: "+18% vs last month", color: "text-success" },
-  { icon: Package, label: "Active Shipments", value: "5", change: "2 arriving today", color: "text-warning" },
-  { icon: BarChart3, label: "Avg Order Value", value: "₹3,450", change: "+8% growth", color: "text-accent-foreground" },
+  { icon: ShoppingCart, label: "Total Orders",    value: "24",     change: "+3 this month",       color: "text-info" },
+  { icon: TrendingUp,   label: "Total Sales",     value: "₹12.3L", change: "+18% vs last month",  color: "text-success" },
+  { icon: Package,      label: "Active Shipments",value: "5",      change: "2 arriving today",    color: "text-warning" },
+  { icon: BarChart3,    label: "Avg Order Value",  value: "₹3,450", change: "+8% growth",          color: "text-accent-foreground" },
 ];
 
+// ─────────────────────────────────────────────────────────────────────────────
+// OrderCard
+// ─────────────────────────────────────────────────────────────────────────────
 function OrderCard({
   order,
   type,
@@ -95,9 +97,9 @@ function OrderCard({
   const [paymentOpen, setPaymentOpen] = useState(false);
   const [copied, setCopied] = useState(false);
   const { toast } = useToast();
-  const config = statusConfig[order.status];
+  const config    = statusConfig[order.status];
   const payConfig = paymentStatusConfig[order.paymentStatus || "pending"];
-  const Icon = type === "order" ? ArrowUpRight : ArrowDownLeft;
+  const Icon      = type === "order" ? ArrowUpRight : ArrowDownLeft;
   const currentStepIdx = progressSteps.findIndex((s) => s.status === order.status);
 
   const copyToClipboard = useCallback(
@@ -110,112 +112,322 @@ function OrderCard({
     [toast]
   );
 
+  // ── INVOICE PDF ────────────────────────────────────────────────────────────
   const handleDownloadInvoice = useCallback(() => {
-    const doc = new jsPDF();
-    const primaryGreen = [46, 125, 50];
+    const doc = new jsPDF({ format: "a4", orientation: "portrait" });
 
-    const gstRate = 0.05;
-    const taxableAmount = order.total / (1 + gstRate);
-    const gstAmount = order.total - taxableAmount;
+    const PAGE_W = doc.internal.pageSize.getWidth();   // 210
+    const PAGE_H = doc.internal.pageSize.getHeight();  // 297
+    const ML = 18;
+    const MR = 18;
+    const CW = PAGE_W - ML - MR; // 174
 
-    doc.setFillColor(primaryGreen[0], primaryGreen[1], primaryGreen[2]);
-    doc.rect(0, 0, 210, 45, "F");
+    const GREEN_DARK  : [number,number,number] = [30,  100, 40];
+    const GREEN_MID   : [number,number,number] = [46,  125, 50];
+    const GREEN_LIGHT : [number,number,number] = [232, 245, 233];
+    const GRAY_DARK   : [number,number,number] = [40,  40,  40];
+    const GRAY_MID    : [number,number,number] = [100, 100, 100];
+    const GRAY_LIGHT  : [number,number,number] = [245, 245, 245];
+    const WHITE       : [number,number,number] = [255, 255, 255];
 
-    // Only add logo if it loaded successfully
-    if (logo) {
-      doc.addImage(logo, "JPEG", 20, 12, 12, 12);
+    // ── HEADER BAND ─────────────────────────────────────────────
+    doc.setFillColor(...GREEN_MID);
+    doc.rect(0, 0, PAGE_W, 48, "F");
+
+    // Logo circle
+    doc.setFillColor(...GREEN_DARK);
+    doc.circle(ML + 8, 24, 8, "F");
+    doc.setTextColor(...WHITE);
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(8);
+    doc.text("AC", ML + 5.2, 25.5);
+
+    // Company name + tagline
+    doc.setFontSize(20);
+    doc.setFont("helvetica", "bold");
+    doc.setTextColor(...WHITE);
+    doc.text("AGRI COMPANION", ML + 20, 20);
+
+    doc.setFontSize(8);
+    doc.setFont("helvetica", "normal");
+    doc.text("Mandi-to-Market Platform for Indian Farmers", ML + 20, 27);
+    doc.text("support@agricompanion.in  |  www.agricompanion.in", ML + 20, 33);
+
+    // INVOICE label — right side of header
+    doc.setFontSize(26);
+    doc.setFont("helvetica", "bold");
+    doc.setTextColor(...WHITE);
+    doc.text("INVOICE", PAGE_W - MR, 22, { align: "right" });
+
+    doc.setFontSize(8);
+    doc.setFont("helvetica", "normal");
+    doc.text(
+      type === "order" ? "PURCHASE INVOICE" : "SALES INVOICE",
+      PAGE_W - MR, 30, { align: "right" }
+    );
+
+    // ── TWO-COLUMN INFO SECTION ──────────────────────────────────
+    // Left: invoice details   |   Right: party details
+    // Each column has its own Y tracker — they never share yPos
+    let LY = 58; // left column Y
+    let RY = 58; // right column Y
+    const RX = PAGE_W / 2 + 5; // right column X start
+
+    // Left heading
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(8.5);
+    doc.setTextColor(...GRAY_DARK);
+    doc.text("INVOICE DETAILS", ML, LY);
+    LY += 5;
+
+    const invoiceDetails: [string, string][] = [
+      ["Invoice No.",    order.id],
+      ["Date",           order.date],
+      ["Order Status",   order.status.charAt(0).toUpperCase() + order.status.slice(1)],
+      ["Payment Status", (order.paymentStatus || "pending").charAt(0).toUpperCase() + (order.paymentStatus || "pending").slice(1)],
+    ];
+
+    invoiceDetails.forEach(([label, value]) => {
+      doc.setFont("helvetica", "normal");
+      doc.setFontSize(8);
+      doc.setTextColor(...GRAY_MID);
+      doc.text(label + ":", ML, LY);
+      doc.setFont("helvetica", "bold");
+      doc.setTextColor(...GRAY_DARK);
+      doc.text(value, ML + 38, LY);
+      LY += 5.5;
+    });
+
+    // Right heading
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(8.5);
+    doc.setTextColor(...GRAY_DARK);
+    doc.text(type === "order" ? "SELLER DETAILS" : "BUYER DETAILS", RX, RY);
+    RY += 5;
+
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(8.5);
+    doc.setTextColor(...GRAY_DARK);
+    const partyLines = doc.splitTextToSize(order.counterparty, CW / 2 - 5) as string[];
+    partyLines.forEach((line) => {
+      doc.text(line, RX, RY);
+      RY += 5;
+    });
+
+    doc.setFont("helvetica", "normal");
+    doc.setFontSize(8);
+    doc.setTextColor(...GRAY_MID);
+    doc.text("Location : " + order.location, RX, RY); RY += 5;
+    doc.text("Platform : KrishiGrow Marketplace", RX, RY); RY += 5;
+
+    // ── HORIZONTAL DIVIDER ───────────────────────────────────────
+    let Y = Math.max(LY, RY) + 6;
+    doc.setDrawColor(200, 200, 200);
+    doc.setLineWidth(0.3);
+    doc.line(ML, Y, PAGE_W - MR, Y);
+    Y += 8;
+
+    // ── ITEMS TABLE ──────────────────────────────────────────────
+    // Column X positions
+    const C_DESC  = ML;
+    const C_CAT   = ML + 72;
+    const C_QTY   = ML + 108;
+    const C_NET   = ML + 130;
+    const C_TOTAL = ML + 155;
+
+    // Table header row
+    doc.setFillColor(...GREEN_MID);
+    doc.rect(ML, Y, CW, 8, "F");
+
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(7.5);
+    doc.setTextColor(...WHITE);
+    doc.text("Description",  C_DESC  + 2, Y + 5.5);
+    doc.text("Category",     C_CAT   + 2, Y + 5.5);
+    doc.text("Qty",          C_QTY   + 2, Y + 5.5);
+    doc.text("Net Amt",      C_NET   + 2, Y + 5.5);
+    doc.text("Total (INR)",  C_TOTAL + 2, Y + 5.5);
+    Y += 10;
+
+    // Single data row
+    const GST_RATE  = 0.05;
+    const taxableAmt = order.total / (1 + GST_RATE);
+    const gstAmt     = order.total - taxableAmt;
+
+    // Alternating row background
+    doc.setFillColor(...GREEN_LIGHT);
+    doc.rect(ML, Y - 1, CW, 12, "F");
+
+    doc.setFont("helvetica", "normal");
+    doc.setFontSize(8);
+    doc.setTextColor(...GRAY_DARK);
+
+    const descLines = doc.splitTextToSize(order.item, 66) as string[];
+    descLines.forEach((line, i) => {
+      doc.text(line, C_DESC + 2, Y + 4 + i * 4.5);
+    });
+    const rowH = Math.max(12, descLines.length * 4.5 + 5);
+
+    doc.text(order.category, C_CAT  + 2, Y + 6);
+    doc.text(order.quantity,  C_QTY  + 2, Y + 6);
+    doc.text(
+      "Rs." + taxableAmt.toLocaleString("en-IN", { maximumFractionDigits: 0 }),
+      C_NET + 2, Y + 6
+    );
+    doc.text(
+      "Rs." + taxableAmt.toLocaleString("en-IN", { maximumFractionDigits: 0 }),
+      C_TOTAL + 2, Y + 6
+    );
+    Y += rowH + 4;
+
+    // Table bottom border
+    doc.setDrawColor(200, 200, 200);
+    doc.setLineWidth(0.3);
+    doc.line(ML, Y, PAGE_W - MR, Y);
+    Y += 8;
+
+    // ── TOTALS BLOCK (right-aligned) ─────────────────────────────
+    const TX = PAGE_W - MR - 82; // label start X
+    const VX = PAGE_W - MR;      // value right-edge X
+
+    const drawRow = (
+      label: string,
+      value: string,
+      bold  = false,
+      big   = false,
+      color: [number,number,number] = GRAY_DARK
+    ) => {
+      doc.setFont("helvetica", bold ? "bold" : "normal");
+      doc.setFontSize(big ? 10.5 : 8.5);
+      doc.setTextColor(...color);
+      doc.text(label, TX,  Y);
+      doc.text(value, VX,  Y, { align: "right" });
+      Y += big ? 8 : 6;
+    };
+
+    drawRow(
+      "Subtotal (excl. GST) :",
+      "Rs." + taxableAmt.toLocaleString("en-IN", { minimumFractionDigits: 2 })
+    );
+    drawRow(
+      "GST @ 5% :",
+      "Rs." + gstAmt.toLocaleString("en-IN", { minimumFractionDigits: 2 })
+    );
+
+    // Separator above grand total
+    doc.setDrawColor(...GREEN_MID);
+    doc.setLineWidth(0.5);
+    doc.line(TX, Y - 1, PAGE_W - MR, Y - 1);
+    Y += 2;
+
+    // Grand total highlight band
+    doc.setFillColor(...GREEN_LIGHT);
+    doc.rect(TX - 3, Y - 3, PAGE_W - MR - TX + 5, 11, "F");
+    drawRow(
+      "TOTAL AMOUNT :",
+      "Rs." + order.total.toLocaleString("en-IN"),
+      true, true, GREEN_DARK
+    );
+
+    Y += 4;
+
+    // ── SECTION DIVIDER ──────────────────────────────────────────
+    doc.setDrawColor(220, 220, 220);
+    doc.setLineWidth(0.3);
+    doc.line(ML, Y, PAGE_W - MR, Y);
+    Y += 7;
+
+    // ── PAYMENT INFO + TERMS (two columns) ───────────────────────
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(8.5);
+    doc.setTextColor(...GRAY_DARK);
+    doc.text("PAYMENT INFORMATION", ML, Y);
+    doc.text("TERMS & CONDITIONS",  RX, Y);
+    Y += 5;
+
+    doc.setFont("helvetica", "normal");
+    doc.setFontSize(7.5);
+    doc.setTextColor(...GRAY_MID);
+
+    const payLines: string[] = [
+      "Status  : " + (order.paymentStatus || "pending").toUpperCase(),
+      "Method  : As per agreed terms",
+      "Ref     : Quote Invoice No. in payment",
+    ];
+
+    const termLines: string[] = [
+      "1. Invoice valid for 30 days from issue date.",
+      "2. Goods remain property of Agri Companion",
+      "   until full payment is received.",
+      "3. Disputes subject to Indian jurisdiction.",
+      "4. Computer-generated; no signature needed.",
+    ];
+
+    const maxRows = Math.max(payLines.length, termLines.length);
+    for (let i = 0; i < maxRows; i++) {
+      if (payLines[i])  doc.text(payLines[i],  ML, Y + i * 5);
+      if (termLines[i]) doc.text(termLines[i], RX, Y + i * 5);
+    }
+    Y += maxRows * 5 + 8;
+
+    // ── TRACKING ID (if present) ─────────────────────────────────
+    if (order.trackingId) {
+      doc.setDrawColor(220, 220, 220);
+      doc.setLineWidth(0.3);
+      doc.line(ML, Y, PAGE_W - MR, Y);
+      Y += 6;
+
+      doc.setFont("helvetica", "bold");
+      doc.setFontSize(8);
+      doc.setTextColor(...GRAY_DARK);
+      doc.text("Tracking ID :", ML, Y);
+
+      doc.setFont("helvetica", "normal");
+      doc.setTextColor(...GRAY_MID);
+      doc.text(order.trackingId, ML + 32, Y);
+      Y += 8;
     }
 
-    doc.setTextColor(255, 255, 255);
+    // ── FOOTER BAND ──────────────────────────────────────────────
+    doc.setFillColor(...GRAY_LIGHT);
+    doc.rect(0, PAGE_H - 22, PAGE_W, 22, "F");
+
+    doc.setDrawColor(...GREEN_MID);
+    doc.setLineWidth(0.8);
+    doc.line(0, PAGE_H - 22, PAGE_W, PAGE_H - 22);
+
     doc.setFont("helvetica", "bold");
-    doc.setFontSize(28);
-    doc.text("KrishiGrowAI", logo ? 38 : 20, 25);
-
-    doc.setFontSize(12);
-    doc.setFont("helvetica", "normal");
-    doc.text("Smart Farming for Modern India", logo ? 38 : 20, 33);
-
-    doc.setFontSize(36);
-    doc.setFont("helvetica", "bold");
-    doc.text("INVOICE", 130, 30);
-
-    doc.setTextColor(0, 0, 0);
-    doc.setDrawColor(200, 200, 200);
-    doc.line(20, 55, 190, 55);
-
-    doc.setFontSize(11);
-    doc.setFont("helvetica", "bold");
-    doc.text("Order Information", 20, 65);
-    doc.text(type === "order" ? "Seller Details" : "Buyer Details", 120, 65);
+    doc.setFontSize(8);
+    doc.setTextColor(...GREEN_DARK);
+    doc.text("Agri Companion", ML, PAGE_H - 14);
 
     doc.setFont("helvetica", "normal");
-    doc.setTextColor(80, 80, 80);
-    doc.text(`Order ID: ${order.id}`, 20, 75);
-    doc.text(`Date: ${order.date}`, 20, 82);
-    doc.text(`Status: ${order.status.toUpperCase()}`, 20, 89);
-    doc.text(`Name: ${order.counterparty}`, 120, 75);
-    doc.text(`Location: ${order.location}`, 120, 82);
-
-    doc.setFillColor(245, 245, 245);
-    doc.rect(20, 105, 170, 10, "F");
-    doc.setFont("helvetica", "bold");
-    doc.setTextColor(0, 0, 0);
-    doc.text("Description", 25, 111.5);
-    doc.text("Category", 90, 111.5);
-    doc.text("Qty", 140, 111.5);
-    doc.text("Amount", 165, 111.5);
-
-    doc.setFont("helvetica", "normal");
-    doc.text(order.item, 25, 122);
-    doc.text(order.category, 90, 122);
-    doc.text(order.quantity, 140, 122);
+    doc.setFontSize(7);
+    doc.setTextColor(...GRAY_MID);
     doc.text(
-      `Rs. ${taxableAmount.toLocaleString("en-IN", { maximumFractionDigits: 0 })}`,
-      165,
-      122
+      "This is a computer-generated invoice and is valid without a physical signature.",
+      PAGE_W / 2, PAGE_H - 14, { align: "center" }
+    );
+    doc.text(
+      "Generated: " + new Date().toLocaleString("en-IN"),
+      PAGE_W - MR, PAGE_H - 14, { align: "right" }
     );
 
-    doc.line(20, 130, 190, 130);
-
-    doc.setFontSize(11);
-    doc.setFont("helvetica", "normal");
-    doc.text("Taxable Value:", 110, 140);
+    doc.setTextColor(160, 160, 160);
+    doc.setFontSize(6.5);
     doc.text(
-      `Rs. ${taxableAmount.toLocaleString("en-IN", { minimumFractionDigits: 2 })}`,
-      160,
-      140
-    );
-    doc.text("GST (5%):", 110, 147);
-    doc.text(
-      `Rs. ${gstAmount.toLocaleString("en-IN", { minimumFractionDigits: 2 })}`,
-      160,
-      147
+      "Agri Companion  |  support@agricompanion.in  |  www.agricompanion.in",
+      PAGE_W / 2, PAGE_H - 8, { align: "center" }
     );
 
-    doc.setFontSize(14);
-    doc.setFont("helvetica", "bold");
-    doc.text("Total Amount Paid:", 110, 157);
-    doc.text(`Rs. ${order.total.toLocaleString("en-IN")}`, 160, 157);
-
-    doc.setFontSize(9);
-    doc.setTextColor(150, 150, 150);
-    doc.text(
-      "This is a computer generated invoice from KrishiGrowAI Mandi-to-Market Platform.",
-      105,
-      280,
-      { align: "center" }
-    );
-    doc.setFont("helvetica", "bold");
-    doc.setTextColor(primaryGreen[0], primaryGreen[1], primaryGreen[2]);
-    doc.text("www.krishigrowai.in", 105, 286, { align: "center" });
-
-    doc.save(`Invoice_${order.id}.pdf`);
+    doc.save(`Invoice_${order.id}_${Date.now()}.pdf`);
 
     toast({
       title: "Invoice Downloaded",
-      description: `PDF Invoice for ${order.id} saved successfully.`,
+      description: `Invoice for ${order.id} saved successfully.`,
     });
   }, [order, type, toast]);
+  // ── END INVOICE PDF ────────────────────────────────────────────
 
   return (
     <>
@@ -345,9 +557,9 @@ function OrderCard({
                   />
                 </div>
                 {progressSteps.map((step, idx) => {
-                  const isActive = idx <= currentStepIdx;
+                  const isActive  = idx <= currentStepIdx;
                   const isCurrent = idx === currentStepIdx;
-                  const StepIcon = statusConfig[step.status].icon;
+                  const StepIcon  = statusConfig[step.status].icon;
 
                   return (
                     <div key={step.label} className="relative z-10 flex flex-col items-center gap-2">
@@ -382,13 +594,13 @@ function OrderCard({
             <div className="space-y-2 text-sm">
               {(
                 [
-                  ["ID", order.id],
-                  ["Item", order.item],
+                  ["ID",       order.id],
+                  ["Item",     order.item],
                   ["Category", order.category],
                   ["Quantity", order.quantity],
                   [type === "order" ? "Seller" : "Buyer", order.counterparty],
                   ["Location", order.location],
-                  ["Date", order.date],
+                  ["Date",     order.date],
                   ...(order.trackingId ? [["Tracking ID", order.trackingId]] : []),
                 ] as [string, string][]
               ).map(([label, value]) => (
@@ -495,18 +707,21 @@ function OrderCard({
   );
 }
 
+// ─────────────────────────────────────────────────────────────────────────────
+// Orders Page
+// ─────────────────────────────────────────────────────────────────────────────
 export default function Orders() {
   const { user } = useAuth();
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const sb = supabase as any;
-  const [search, setSearch] = useState("");
+  const [search, setSearch]           = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
-  const [activeTab, setActiveTab] = useState("orders");
+  const [activeTab, setActiveTab]     = useState("orders");
 
   const cancelOrderMutation = useMutation({
     mutationFn: async (order: Order) => {
-      const localKey = `local_orders_${user?.id}`;
+      const localKey    = `local_orders_${user?.id}`;
       const localOrders = JSON.parse(localStorage.getItem(localKey) || "[]");
       const updatedLocalOrders = localOrders.map((o: { id: string; status: string }) =>
         o.id === order.rawId ? { ...o, status: "cancelled" } : o
@@ -536,9 +751,7 @@ export default function Orders() {
   });
 
   const handleCancelOrder = useCallback(
-    (order: Order) => {
-      cancelOrderMutation.mutate(order);
-    },
+    (order: Order) => { cancelOrderMutation.mutate(order); },
     [cancelOrderMutation]
   );
 
@@ -547,7 +760,7 @@ export default function Orders() {
     queryFn: async () => {
       if (!user) return [];
 
-      const localKey = `local_orders_${user.id}`;
+      const localKey    = `local_orders_${user.id}`;
       const localOrders: Record<string, unknown>[] = JSON.parse(
         localStorage.getItem(localKey) || "[]"
       );
@@ -576,17 +789,17 @@ export default function Orders() {
           item:
             (items[0]?.name || "Agricultural Item") +
             (items.length > 1 ? ` (+${items.length - 1} more)` : ""),
-          category: "Marketplace",
-          quantity: (items[0]?.qty || 1) + " units",
-          total: (o.total_price as number) || 0,
-          date: o.created_at
+          category:      "Marketplace",
+          quantity:      (items[0]?.qty || 1) + " units",
+          total:         (o.total_price as number) || 0,
+          date:          o.created_at
             ? new Date(o.created_at as string).toLocaleDateString()
             : new Date().toLocaleDateString(),
-          status: (o.status as OrderStatus) || "pending",
-          counterparty: "KrishiGrow Marketplace",
-          location: (o.shipping_address as string) || "Default Address",
+          status:        (o.status as OrderStatus) || "pending",
+          counterparty:  "KrishiGrow Marketplace",
+          location:      (o.shipping_address as string) || "Default Address",
           paymentStatus: (o.payment_status as "paid" | "pending" | "cod") || "pending",
-          trackingId: o.tracking_id as string | undefined,
+          trackingId:    o.tracking_id as string | undefined,
         } as Order;
       });
     },
@@ -597,8 +810,8 @@ export default function Orders() {
     () =>
       (activeTab === "orders" ? fetchedOrders : mySales).filter((o) => {
         const matchesSearch =
-          (o.item?.toLowerCase() || "").includes(search.toLowerCase()) ||
-          (o.id?.toUpperCase() || "").includes(search.toUpperCase()) ||
+          (o.item?.toLowerCase()        || "").includes(search.toLowerCase()) ||
+          (o.id?.toUpperCase()          || "").includes(search.toUpperCase()) ||
           (o.counterparty?.toLowerCase() || "").includes(search.toLowerCase());
         const matchesStatus = statusFilter === "all" || o.status === statusFilter;
         return matchesSearch && matchesStatus;
