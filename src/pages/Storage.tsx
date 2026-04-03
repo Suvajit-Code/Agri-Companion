@@ -591,7 +591,7 @@ export default function Storage() {
 
       {/* Booking Dialog */}
       <Dialog open={bookingOpen} onOpenChange={setBookingOpen}>
-        <DialogContent className="sm:max-w-lg">
+        <DialogContent className="w-full max-h-[90vh] overflow-y-auto sm:max-w-lg mx-4">
           <DialogHeader>
             <DialogTitle className="font-heading">Book Storage</DialogTitle>
             <DialogDescription>
@@ -605,7 +605,7 @@ export default function Storage() {
           </DialogHeader>
 
           <form onSubmit={handleSubmitBooking} className="space-y-4 mt-2">
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div className="space-y-1.5">
                 <label className="text-sm font-medium text-foreground">Commodity *</label>
                 <div className="relative">
@@ -619,7 +619,7 @@ export default function Storage() {
               </div>
             </div>
 
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div className="space-y-1.5">
                 <label className="text-sm font-medium text-foreground">Start Date *</label>
                 <div className="relative">
@@ -641,7 +641,7 @@ export default function Storage() {
               </div>
             </div>
 
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div className="space-y-1.5">
                 <label className="text-sm font-medium text-foreground">Contact Name *</label>
                 <div className="relative">
