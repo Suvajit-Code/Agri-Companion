@@ -1,9 +1,11 @@
 import { useState, useRef, useEffect } from "react";
 import { motion } from "framer-motion";
-import { Send, Bot, User, Loader2, Sparkles, Leaf, CloudSun, TrendingUp, Bug } from "lucide-react";
+import { Send, Bot, User, Loader2, Sparkles, Leaf, CloudSun, TrendingUp, Bug, X, Upload } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { MediaUpload, MediaFile } from "@/components/MediaUpload";
+import { MediaGallery, MediaData } from "@/components/MediaGallery";
 
-type Msg = { role: "user" | "assistant"; content: string };
+type Msg = { role: "user" | "assistant"; content: string; media?: MediaData[] };
 
 const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL;
 const SUPABASE_PUBLISHABLE_KEY = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY || import.meta.env.VITE_SUPABASE_ANON_KEY;
@@ -25,6 +27,7 @@ export default function Chatbot() {
   ]);
   const [input, setInput] = useState("");
   const [isLoading, setIsLoading] = useState(false);
+  const [selectedMedia, setSelectedMedia] = useState<MediaFile[]>([]);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
@@ -34,9 +37,19 @@ export default function Chatbot() {
 
   const sendMessage = async (text: string) => {
     if (!text.trim() || isLoading) return;
-    const userMsg: Msg = { role: "user", content: text.trim() };
+    
+    // Convert media files to data URLs
+    const mediaData: MediaData[] = selectedMedia.map((m) => ({
+      id: m.id,
+      url: m.preview,
+      type: m.type,
+      name: m.file.name,
+    }));
+
+    const userMsg: Msg = { role: "user", content: text.trim(), media: mediaData.length > 0 ? mediaData : undefined };
     setMessages((prev) => [...prev, userMsg]);
     setInput("");
+    setSelectedMedia([]);
     setIsLoading(true);
 
     try {
@@ -205,12 +218,19 @@ Guidelines:
             }`}>
               {msg.role === "user" ? <User className="w-4 h-4 text-secondary-foreground" /> : <Bot className="w-4 h-4 text-primary-foreground" />}
             </div>
-            <div className={`max-w-[75%] rounded-2xl px-4 py-3 text-sm leading-relaxed ${
-              msg.role === "user"
-                ? "bg-primary text-primary-foreground rounded-br-md"
-                : "glass-card text-foreground rounded-bl-md"
-            }`}>
-              <p className="whitespace-pre-wrap">{msg.content}</p>
+            <div className={`max-w-[75%] space-y-2 ${msg.role === "user" ? "flex flex-col items-end" : ""}`}>
+              {msg.media && msg.media.length > 0 && (
+                <div className="max-w-[75%]">
+                  <MediaGallery media={msg.media} />
+                </div>
+              )}
+              <div className={`rounded-2xl px-4 py-3 text-sm leading-relaxed ${
+                msg.role === "user"
+                  ? "bg-primary text-primary-foreground rounded-br-md"
+                  : "glass-card text-foreground rounded-bl-md"
+              }`}>
+                <p className="whitespace-pre-wrap">{msg.content}</p>
+              </div>
             </div>
           </motion.div>
         ))}
@@ -247,24 +267,51 @@ Guidelines:
       )}
 
       {/* Input */}
-      <div className="flex gap-2">
-        <input
-          ref={inputRef}
-          type="text"
-          placeholder="Ask about crops, weather, prices..."
-          className="flex-1 bg-muted rounded-xl px-4 py-3 text-sm text-foreground placeholder:text-muted-foreground outline-none focus:ring-2 ring-primary/30"
-          value={input}
-          onChange={(e) => setInput(e.target.value)}
-          onKeyDown={(e) => e.key === "Enter" && sendMessage(input)}
-          disabled={isLoading}
-        />
-        <Button
-          onClick={() => sendMessage(input)}
-          disabled={isLoading || !input.trim()}
-          className="gradient-hero text-primary-foreground border-0 hover:opacity-90 rounded-xl px-4"
-        >
-          <Send className="w-4 h-4" />
-        </Button>
+      <div className="space-y-2">
+        {selectedMedia.length > 0 && (
+          <div className="flex gap-2 flex-wrap">
+            {selectedMedia.map((m) => (
+              <div key={m.id} className="relative rounded-lg overflow-hidden bg-muted border border-border group w-16 h-16">
+                {m.type === "image" ? (
+                  <img src={m.preview} alt="preview" className="w-full h-full object-cover" />
+                ) : (
+                  <div className="w-full h-full bg-black flex items-center justify-center">
+                    <span className="text-xs text-white">Video</span>
+                  </div>
+                )}
+                <button
+                  onClick={() => {
+                    const updated = selectedMedia.filter((x) => x.id !== m.id);
+                    setSelectedMedia(updated);
+                  }}
+                  className="absolute -top-2 -right-2 bg-destructive text-destructive-foreground rounded-full w-6 h-6 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
+                >
+                  <X className="w-3 h-3" />
+                </button>
+              </div>
+            ))}
+          </div>
+        )}
+        <MediaUpload onMediaSelect={setSelectedMedia} selectedMedia={selectedMedia} maxFiles={5} />
+        <div className="flex gap-2">
+          <input
+            ref={inputRef}
+            type="text"
+            placeholder="Ask about crops, weather, prices... You can also upload images or videos"
+            className="flex-1 bg-muted rounded-xl px-4 py-3 text-sm text-foreground placeholder:text-muted-foreground outline-none focus:ring-2 ring-primary/30"
+            value={input}
+            onChange={(e) => setInput(e.target.value)}
+            onKeyDown={(e) => e.key === "Enter" && sendMessage(input)}
+            disabled={isLoading}
+          />
+          <Button
+            onClick={() => sendMessage(input)}
+            disabled={isLoading || !input.trim()}
+            className="gradient-hero text-primary-foreground border-0 hover:opacity-90 rounded-xl px-4"
+          >
+            <Send className="w-4 h-4" />
+          </Button>
+        </div>
       </div>
     </div>
   );

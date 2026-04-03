@@ -20,6 +20,9 @@ import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { useNavigate } from "react-router-dom";
 import { useToast } from "@/hooks/use-toast";
+import { MediaUpload, MediaFile } from "@/components/MediaUpload";
+import { MediaGallery, MediaData } from "@/components/MediaGallery";
+import { uploadMediaToSupabase, getPostMedia, deletePostMedia } from "@/lib/mediaService";
 
 const categories = [
   { id: "all", label: "All Topics", icon: Users },
@@ -52,6 +55,7 @@ interface Post {
   title: string;
   content: string;
   image?: string;
+  media?: MediaData[];
   likes_count: number;
   comments: Comment[];
   views_count: number;
@@ -82,6 +86,7 @@ export default function Community() {
   const [newContent, setNewContent] = useState("");
   const [newCategory, setNewCategory] = useState("");
   const [newTags, setNewTags] = useState("");
+  const [newPostMedia, setNewPostMedia] = useState<MediaFile[]>([]);
 
   // Edit post form
   const [editTitle, setEditTitle] = useState("");
@@ -204,6 +209,10 @@ export default function Community() {
           }
 
           const fullName = profileMap.get(post.user_id) || "Farmer";
+          
+          // Fetch media for this post from database
+          const media = await getPostMedia(post.id);
+          
           return {
             id: post.id,
             user_id: post.user_id,
@@ -219,6 +228,7 @@ export default function Community() {
             tags: post.tags || [],
             liked_by_user,
             bookmarked_by_user: false,
+            media: media && media.length > 0 ? media : undefined,
           };
         })
       );
@@ -235,8 +245,10 @@ export default function Community() {
       content: string;
       category: string;
       tags: string[];
+      mediaFiles?: File[];
     }) => {
-      const { error } = await sb.from("community_posts").insert([
+      // Create the post first
+      const { data: newPost, error: postError } = await sb.from("community_posts").insert([
         {
           user_id: user?.id,
           title: data.title,
@@ -244,9 +256,17 @@ export default function Community() {
           category: data.category,
           tags: data.tags,
         },
-      ]);
+      ]).select().single();
 
-      if (error) throw error;
+      if (postError) throw postError;
+      if (!newPost) throw new Error("Failed to create post");
+
+      // Upload media files if provided
+      if (data.mediaFiles && data.mediaFiles.length > 0) {
+        await uploadMediaToSupabase(data.mediaFiles, user?.id || "", newPost.id);
+      }
+
+      return newPost;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["communityPosts"] });
@@ -254,8 +274,9 @@ export default function Community() {
       setNewContent("");
       setNewCategory("");
       setNewTags("");
+      setNewPostMedia([]);
       setShowCreateDialog(false);
-      toast({ title: "Success", description: "Post created successfully!" });
+      toast({ title: "Success", description: "Post published! Media is now visible to all users." });
     },
     onError: (error: Error) => {
       toast({ title: "Error", description: error.message, variant: "destructive" });
@@ -351,6 +372,10 @@ export default function Community() {
   // Delete post mutation
   const deletePostMutation = useMutation({
     mutationFn: async (postId: string) => {
+      // Delete media files first
+      await deletePostMedia(postId);
+
+      // Then delete the post
       const { error } = await sb
         .from("community_posts")
         .delete()
@@ -409,9 +434,10 @@ export default function Community() {
       return;
     }
     if (!newTitle.trim() || !newContent.trim() || !newCategory) {
-      toast({ title: "Error", description: "Please fill all fields", variant: "destructive" });
+      toast({ title: "Error", description: "Please fill all required fields", variant: "destructive" });
       return;
     }
+
     createPostMutation.mutate({
       title: newTitle,
       content: newContent,
@@ -420,6 +446,7 @@ export default function Community() {
         .split(",")
         .map((t) => t.trim())
         .filter(Boolean),
+      mediaFiles: newPostMedia.length > 0 ? newPostMedia.map(m => m.file) : undefined,
     });
   };
 
@@ -597,6 +624,34 @@ export default function Community() {
                     className="border-2"
                   />
                 </div>
+                {newPostMedia.length > 0 && (
+                  <div>
+                    <label className="text-sm font-medium mb-2 block">Selected Media ({newPostMedia.length})</label>
+                    <div className="flex gap-2 flex-wrap">
+                      {newPostMedia.map((m) => (
+                        <div key={m.id} className="relative rounded-lg overflow-hidden bg-muted border border-border group w-16 h-16">
+                          {m.type === "image" ? (
+                            <img src={m.preview} alt="preview" className="w-full h-full object-cover" />
+                          ) : (
+                            <div className="w-full h-full bg-black flex items-center justify-center">
+                              <span className="text-xs text-white">Video</span>
+                            </div>
+                          )}
+                          <button
+                            onClick={() => {
+                              const updated = newPostMedia.filter((x) => x.id !== m.id);
+                              setNewPostMedia(updated);
+                            }}
+                            className="absolute -top-2 -right-2 bg-destructive text-destructive-foreground rounded-full w-6 h-6 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
+                          >
+                            <X className="w-3 h-3" />
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+                <MediaUpload onMediaSelect={setNewPostMedia} selectedMedia={newPostMedia} maxFiles={5} />
                 <Button
                   onClick={handleCreatePost}
                   disabled={createPostMutation.isPending}
@@ -696,6 +751,17 @@ export default function Community() {
                     <p className="text-sm text-muted-foreground line-clamp-2 mb-4 leading-relaxed">
                       {post.content}
                     </p>
+                    {post.media && post.media.length > 0 && (
+                      <div className="mb-4 max-h-48 rounded-lg overflow-hidden bg-muted flex items-center justify-center">
+                        {post.media[0].type === "image" ? (
+                          <img src={post.media[0].url} alt="preview" className="w-full h-full object-cover" />
+                        ) : (
+                          <div className="w-full h-48 bg-black flex items-center justify-center">
+                            <span className="text-white text-sm">Video attached</span>
+                          </div>
+                        )}
+                      </div>
+                    )}
                     <div className="flex items-center gap-2 flex-wrap mb-4">
                       <Badge className={`${getCategoryColor(post.category)} border`}>
                         {categories.find((c) => c.id === post.category)?.label}
@@ -799,6 +865,13 @@ export default function Community() {
                 <p className="text-sm text-muted-foreground leading-relaxed whitespace-pre-wrap">
                   {selectedPost.content}
                 </p>
+
+                {selectedPost.media && selectedPost.media.length > 0 && (
+                  <div>
+                    <h4 className="font-medium text-sm mb-3">Attached Media</h4>
+                    <MediaGallery media={selectedPost.media} />
+                  </div>
+                )}
 
                 <div className="flex items-center gap-2 flex-wrap">
                   <Badge className={`${getCategoryColor(selectedPost.category)} border`}>
