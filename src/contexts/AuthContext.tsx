@@ -322,26 +322,40 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const signOut = useCallback(async () => {
     try {
       setLoading(true);
-      // Try with extreme short timeout, don't wait for server if it hang
+      // Attempt server sign-out with short timeout
       await Promise.race([
         supabase.auth.signOut(),
         new Promise((_, reject) => setTimeout(() => reject(new Error("SignOut Timeout")), 2000))
       ]).catch(() => {
-        // Fallback: Clear session locally anyway if server is unreachable
-        localStorage.removeItem("supabase.auth.token");
-        sessionStorage.clear();
+        // Server unavailable; clear auth locally
+        console.warn("Server signOut failed, clearing local auth");
       });
-      
-      setUser(null);
     } catch (e) {
-      setUser(null);
-    } finally {
-      // Small delay to ensure state propagates, then redirect
-      setTimeout(() => {
-        setLoading(false);
-        window.location.href = "/auth";
-      }, 100);
+      console.warn("SignOut error:", e);
     }
+
+    // Clear all auth-related localStorage keys (format: sb-<projectRef>-auth-token)
+    try {
+      Object.keys(localStorage)
+        .filter((key) => key.startsWith("sb-") && key.endsWith("-auth-token"))
+        .forEach((key) => localStorage.removeItem(key));
+    } catch {
+      // Ignore errors while clearing storage
+    }
+
+    // Clear session storage
+    try {
+      sessionStorage.clear();
+    } catch {
+      // Ignore errors
+    }
+
+    // Clear React state
+    setUser(null);
+    setLoading(false);
+
+    // Redirect to auth page
+    window.location.href = "/auth";
   }, []);
 
   const refreshUserProfile = useCallback(async () => {
