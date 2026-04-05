@@ -1,4 +1,5 @@
 import { useState, useCallback } from "react";
+import { useTranslation } from "react-i18next";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   MapPin, FlaskConical, Droplets, Settings2, ChevronRight, ChevronLeft,
@@ -263,6 +264,7 @@ const mapApiCropToUiCrop = (item: CropRecommendationApiItem, season: string): Cr
 // ── Component ──
 export default function AIRecommendation() {
   const { toast } = useToast();
+  const { t } = useTranslation();
   const [currentStep, setCurrentStep] = useState(0);
   const [form, setForm] = useState<FormData>(defaultForm);
   const [detectingLocation, setDetectingLocation] = useState(false);
@@ -851,8 +853,8 @@ export default function AIRecommendation() {
             <Sparkles className="w-5 h-5 text-accent" />
           </div>
           <div>
-            <h1 className="text-2xl font-heading font-bold text-foreground">AI Crop Recommendation</h1>
-            <p className="text-sm text-muted-foreground">Tell us about your farm — our AI will find the best crops for you.</p>
+            <h1 className="text-2xl font-heading font-bold text-foreground">{t("aiRecommendation.title")}</h1>
+            <p className="text-sm text-muted-foreground">{t("aiRecommendation.subtitle")}</p>
           </div>
         </div>
       </div>
@@ -883,7 +885,7 @@ export default function AIRecommendation() {
       <div className="glass-card rounded-2xl p-6 md:p-8 max-w-3xl">
         <div className="flex items-center justify-between mb-1">
           <h2 className="text-lg font-heading font-semibold text-foreground">{steps[currentStep].title}</h2>
-          <span className="text-xs px-2 py-1 rounded-full bg-muted text-muted-foreground">Step {currentStep + 1}/4</span>
+          <span className="text-xs px-2 py-1 rounded-full bg-muted text-muted-foreground">{t("aiRecommendation.step")} {currentStep + 1}/{steps.length}</span>
         </div>
         <p className="text-sm text-muted-foreground mb-6">{steps[currentStep].subtitle}</p>
 
@@ -916,7 +918,7 @@ export default function AIRecommendation() {
             onClick={() => setCurrentStep((s) => s - 1)}
             disabled={currentStep === 0}
           >
-            <ChevronLeft className="w-4 h-4 mr-1" /> Back
+            <ChevronLeft className="w-4 h-4 mr-1" /> {t("aiRecommendation.buttons.back")}
           </Button>
           {currentStep < 3 ? (
             <Button
@@ -924,7 +926,7 @@ export default function AIRecommendation() {
               disabled={!canProceed()}
               className="gradient-hero text-primary-foreground border-0 hover:opacity-90"
             >
-              Continue <ChevronRight className="w-4 h-4 ml-1" />
+              {t("aiRecommendation.buttons.continue")} <ChevronRight className="w-4 h-4 ml-1" />
             </Button>
           ) : (
             <Button
@@ -932,7 +934,7 @@ export default function AIRecommendation() {
               disabled={!canProceed()}
               className="gradient-warm text-secondary-foreground border-0 hover:opacity-90"
             >
-              <Sparkles className="w-4 h-4 mr-2" /> Get AI Recommendations
+              <Sparkles className="w-4 h-4 mr-2" /> {t("aiRecommendation.buttons.getRecommendations")}
             </Button>
           )}
         </div>
