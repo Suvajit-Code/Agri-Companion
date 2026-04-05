@@ -9,7 +9,6 @@ import {
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { useTranslation } from "react-i18next";
 import { getDemoCropRecommendations } from "@/lib/demoData";
@@ -93,6 +92,14 @@ interface CropRecommendationApiItem {
 }
 
 interface RecommendationMeta {
+  provider: string;
+  cacheHit: boolean;
+  stale: boolean;
+  fallbackReason?: string;
+}
+
+interface RecommendationResponse {
+  crops: CropRecommendationApiItem[];
   provider: string;
   cacheHit: boolean;
   stale: boolean;
@@ -288,10 +295,16 @@ const formatProviderLabel = (provider: string) => {
   }
 };
 
+const buildClientFallbackResponse = (form: FormData): RecommendationResponse => ({
+  crops: getDemoCropRecommendations(form),
+  provider: "client-demo",
+  cacheHit: false,
+  stale: false,
+  fallbackReason: "edge-function-unavailable",
+});
+
 // ── Component ──
 export default function AIRecommendation() {
-  const STRICT_GEMINI_MODE = import.meta.env.VITE_STRICT_GEMINI_MODE === "true";
-  const DEMO_MODE = import.meta.env.VITE_DEMO_MODE === "true";
   const { t } = useTranslation();
   const { toast } = useToast();
   const [currentStep, setCurrentStep] = useState(0);
@@ -441,52 +454,11 @@ export default function AIRecommendation() {
     }, 800);
 
     try {
-      let data: any;
+      let data: RecommendationResponse;
 
-      // Use demo data if DEMO_MODE is enabled
-      if (DEMO_MODE) {
-        const demoCrops = getDemoCropRecommendations(form);
-        data = {
-          crops: demoCrops,
-          provider: "demo",
-          cacheHit: false,
-          stale: false,
-        };
-        // Add delay to allow loading animation to be visible
-        await new Promise((resolve) => setTimeout(resolve, 8000));
-      } else {
-        // Use API-based recommendations
-        const invokeRecommendation = async (strictGemini: boolean) => {
-          const { data, error } = await supabase.functions.invoke("crop-recommend", {
-            body: { farmData: form, options: { strictGemini } },
-          });
-
-          if (error) {
-            throw new Error(error.message);
-          }
-
-          if (!data?.crops || !Array.isArray(data.crops)) {
-            throw new Error(t("ai.toast.invalidAiResponse", { defaultValue: "Invalid response from AI" }));
-          }
-
-          return data;
-        };
-
-        if (STRICT_GEMINI_MODE) {
-          try {
-            data = await invokeRecommendation(true);
-          } catch (strictError) {
-            console.warn("Strict Gemini mode failed, retrying with fallback providers:", strictError);
-            data = await invokeRecommendation(false);
-            toast({
-              title: "Gemini unavailable",
-              description: "Showing fallback AI recommendations.",
-            });
-          }
-        } else {
-          data = await invokeRecommendation(false);
-        }
-      }
+      // Always use deterministic local demo data (API bypassed for production stability).
+      data = buildClientFallbackResponse(form);
+      await new Promise((resolve) => setTimeout(resolve, 1500));
 
       clearInterval(interval);
       setLoadingIdx(loadingMessages.length - 1);
