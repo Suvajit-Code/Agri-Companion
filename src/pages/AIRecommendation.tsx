@@ -10,7 +10,6 @@ import {
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/hooks/use-toast";
-import { useTranslation } from "react-i18next";
 import { getDemoCropRecommendations } from "@/lib/demoData";
 
 // ── Types ──
@@ -89,21 +88,6 @@ interface CropRecommendationApiItem {
   monthlyTimeline?: { month: string; activity: string; status: string }[];
   pestRisks?: { name: string; risk: string; solution: string }[];
   fertilizerPlan?: { stage: string; fertilizer: string; timing: string }[];
-}
-
-interface RecommendationMeta {
-  provider: string;
-  cacheHit: boolean;
-  stale: boolean;
-  fallbackReason?: string;
-}
-
-interface RecommendationResponse {
-  crops: CropRecommendationApiItem[];
-  provider: string;
-  cacheHit: boolean;
-  stale: boolean;
-  fallbackReason?: string;
 }
 
 // ── Step data ──
@@ -276,36 +260,8 @@ const mapApiCropToUiCrop = (item: CropRecommendationApiItem, season: string): Cr
   };
 };
 
-const formatProviderLabel = (provider: string) => {
-  switch (provider) {
-    case "gemini":
-      return "Live AI (Gemini)";
-    case "groq":
-      return "Live AI (Groq)";
-    case "cache":
-      return "Cached Recommendation";
-    case "cache-stale":
-      return "Cached (Stale Fallback)";
-    case "rule-fallback":
-      return "Demo Rule-Based Fallback";
-    case "client-demo":
-      return "Local Demo Fallback";
-    default:
-      return provider || "Unknown";
-  }
-};
-
-const buildClientFallbackResponse = (form: FormData): RecommendationResponse => ({
-  crops: getDemoCropRecommendations(form),
-  provider: "client-demo",
-  cacheHit: false,
-  stale: false,
-  fallbackReason: "edge-function-unavailable",
-});
-
 // ── Component ──
 export default function AIRecommendation() {
-  const { t } = useTranslation();
   const { toast } = useToast();
   const [currentStep, setCurrentStep] = useState(0);
   const [form, setForm] = useState<FormData>(defaultForm);
@@ -317,29 +273,6 @@ export default function AIRecommendation() {
   const [compareMode, setCompareMode] = useState(false);
   const [compareList, setCompareList] = useState<number[]>([]);
   const [cropResults, setCropResults] = useState<CropResult[]>([]);
-  const [recommendationMeta, setRecommendationMeta] = useState<RecommendationMeta | null>(null);
-  const stepText = [
-    {
-      label: t("ai.steps.location.label", { defaultValue: "Location" }),
-      title: t("ai.steps.location.title", { defaultValue: "Farm Location" }),
-      subtitle: t("ai.steps.location.subtitle", { defaultValue: "Where is your farm located?" }),
-    },
-    {
-      label: t("ai.steps.soil.label", { defaultValue: "Soil" }),
-      title: t("ai.steps.soil.title", { defaultValue: "Soil Information" }),
-      subtitle: t("ai.steps.soil.subtitle", { defaultValue: "Tell us about your soil composition" }),
-    },
-    {
-      label: t("ai.steps.resources.label", { defaultValue: "Resources" }),
-      title: t("ai.steps.resources.title", { defaultValue: "Resources & Budget" }),
-      subtitle: t("ai.steps.resources.subtitle", { defaultValue: "Water, land & financial capacity" }),
-    },
-    {
-      label: t("ai.steps.preferences.label", { defaultValue: "Preferences" }),
-      title: t("ai.steps.preferences.title", { defaultValue: "Farming Preferences" }),
-      subtitle: t("ai.steps.preferences.subtitle", { defaultValue: "Season, purpose & risk level" }),
-    },
-  ];
 
   const update = useCallback(<K extends keyof FormData>(key: K, value: FormData[K]) => {
     setForm((prev) => ({ ...prev, [key]: value }));
@@ -356,8 +289,8 @@ export default function AIRecommendation() {
     if (!("geolocation" in navigator)) {
       update("autoDetect", false);
       toast({
-        title: t("ai.toast.gpsNotSupportedTitle", { defaultValue: "GPS not supported" }),
-        description: t("ai.toast.gpsNotSupportedDesc", { defaultValue: "Your browser does not support geolocation. Please enter location manually." }),
+        title: "GPS not supported",
+        description: "Your browser does not support geolocation. Please enter location manually.",
         variant: "destructive",
       });
       return;
@@ -402,8 +335,8 @@ export default function AIRecommendation() {
 
       update("location", detectedLocation);
       toast({
-        title: t("ai.toast.locationDetectedTitle", { defaultValue: "Location detected" }),
-        description: t("ai.toast.locationDetectedDesc", { defaultValue: "Using {{location}} for recommendations.", location: detectedLocation }),
+        title: "Location detected",
+        description: `Using ${detectedLocation} for recommendations.`,
       });
     } catch (error) {
       update("autoDetect", false);
@@ -412,16 +345,16 @@ export default function AIRecommendation() {
       if (typeof error === "object" && error && "code" in error) {
         const geolocationError = error as GeolocationPositionError;
         if (geolocationError.code === 1) {
-          message = t("ai.toast.locationDenied", { defaultValue: "Location permission denied. Please allow GPS access or enter location manually." });
+          message = "Location permission denied. Please allow GPS access or enter location manually.";
         } else if (geolocationError.code === 2) {
-          message = t("ai.toast.locationUnavailable", { defaultValue: "Location unavailable. Please check network/GPS and try again." });
+          message = "Location unavailable. Please check network/GPS and try again.";
         } else if (geolocationError.code === 3) {
-          message = t("ai.toast.locationTimeout", { defaultValue: "Location request timed out. Please try again or enter manually." });
+          message = "Location request timed out. Please try again or enter manually.";
         }
       }
 
       toast({
-        title: t("ai.toast.gpsFailedTitle", { defaultValue: "GPS detection failed" }),
+        title: "GPS detection failed",
         description: message,
         variant: "destructive",
       });
@@ -443,7 +376,6 @@ export default function AIRecommendation() {
   const handleAnalyze = async () => {
     setLoading(true);
     setLoadingIdx(0);
-    setRecommendationMeta(null);
 
     // Animate loading messages while waiting for AI
     const interval = setInterval(() => {
@@ -454,41 +386,33 @@ export default function AIRecommendation() {
     }, 800);
 
     try {
-      let data: RecommendationResponse;
+      const data = {
+        crops: getDemoCropRecommendations(form),
+      };
 
-      // Always use deterministic local demo data (API bypassed for production stability).
-      data = buildClientFallbackResponse(form);
-      await new Promise((resolve) => setTimeout(resolve, 1500));
+      // Keep a short delay so loading UI does not feel abrupt.
+      await new Promise((resolve) => setTimeout(resolve, 1200));
 
       clearInterval(interval);
-      setLoadingIdx(loadingMessages.length - 1);
+      if (!data?.crops || !Array.isArray(data.crops)) throw new Error("Invalid response from AI");
 
       const mappedResults = (data.crops as CropRecommendationApiItem[])
         .slice(0, 5)
         .map((item) => mapApiCropToUiCrop(item, form.season));
 
       if (mappedResults.length === 0) {
-        throw new Error(t("ai.toast.noRecommendations", { defaultValue: "No crop recommendations generated" }));
+        throw new Error("No crop recommendations generated");
       }
 
       setCropResults(mappedResults);
-      setRecommendationMeta({
-        provider: data?.provider || "unknown",
-        cacheHit: Boolean(data?.cacheHit),
-        stale: Boolean(data?.stale),
-        fallbackReason: typeof data?.fallbackReason === "string" ? data.fallbackReason : undefined,
-      });
       setLoading(false);
       setShowResults(true);
     } catch (err) {
       clearInterval(interval);
-
       setLoading(false);
       toast({
-        title: t("ai.toast.recommendationFailedTitle", { defaultValue: "AI Recommendation Failed" }),
-        description: err instanceof Error
-          ? err.message
-          : t("ai.toast.retry", { defaultValue: "Could not get recommendations. Please try again." }),
+        title: "AI Recommendation Failed",
+        description: err instanceof Error ? err.message : "Could not get recommendations. Please try again.",
         variant: "destructive",
       });
     }
@@ -502,7 +426,6 @@ export default function AIRecommendation() {
     setCompareMode(false);
     setCompareList([]);
     setCropResults([]);
-    setRecommendationMeta(null);
   };
 
   const toggleCompare = (idx: number) => {
@@ -534,8 +457,8 @@ export default function AIRecommendation() {
               className="absolute inset-0 rounded-full border-2 border-primary/30"
             />
           </div>
-          <h2 className="text-2xl font-heading font-bold text-foreground mb-2">{t("ai.loading.title", { defaultValue: "AI is Analyzing Your Farm" })}</h2>
-          <p className="text-sm text-muted-foreground mb-8">{t("ai.loading.subtitle", { defaultValue: "Processing 5 data layers for accurate recommendations" })}</p>
+          <h2 className="text-2xl font-heading font-bold text-foreground mb-2">AI is Analyzing Your Farm</h2>
+          <p className="text-sm text-muted-foreground mb-8">Processing 5 data layers for accurate recommendations</p>
           <div className="space-y-3 max-w-xs mx-auto">
             {loadingMessages.map((msg, i) => (
               <motion.div
@@ -558,7 +481,7 @@ export default function AIRecommendation() {
                 ) : (
                   <div className="w-6 h-6 rounded-full bg-muted shrink-0" />
                 )}
-                <span className={i <= loadingIdx ? "text-foreground font-medium" : "text-muted-foreground"}>{t(`ai.loading.messages.${i}`, { defaultValue: msg.text })}</span>
+                <span className={i <= loadingIdx ? "text-foreground font-medium" : "text-muted-foreground"}>{msg.text}</span>
               </motion.div>
             ))}
           </div>
@@ -572,7 +495,7 @@ export default function AIRecommendation() {
                 transition={{ duration: 0.5 }}
               />
             </div>
-            <p className="text-xs text-muted-foreground mt-2">{t("ai.loading.complete", { defaultValue: "{{percent}}% complete", percent: Math.round(((loadingIdx + 1) / loadingMessages.length) * 100) })}</p>
+            <p className="text-xs text-muted-foreground mt-2">{Math.round(((loadingIdx + 1) / loadingMessages.length) * 100)}% complete</p>
           </div>
         </motion.div>
       </div>
@@ -582,8 +505,6 @@ export default function AIRecommendation() {
   // ── Results screen ──
   if (showResults) {
     const crop = cropResults[selectedCrop];
-    const providerLabel = recommendationMeta ? formatProviderLabel(recommendationMeta.provider) : "Live AI";
-    const usingFallback = recommendationMeta?.provider === "rule-fallback" || recommendationMeta?.provider === "client-demo";
 
     return (
       <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.5 }}>
@@ -594,22 +515,16 @@ export default function AIRecommendation() {
               <div className="w-8 h-8 rounded-lg gradient-hero flex items-center justify-center">
                 <Sparkles className="w-4 h-4 text-accent" />
               </div>
-              <h1 className="text-2xl font-heading font-bold text-foreground">{t("ai.results.title", { defaultValue: "AI Crop Recommendations" })}</h1>
+              <h1 className="text-2xl font-heading font-bold text-foreground">AI Crop Recommendations</h1>
             </div>
-            <p className="text-sm text-muted-foreground">{t("ai.results.subtitle", { defaultValue: "5 crops analyzed · Ranked by suitability for your farm" })}</p>
-            <p className="text-xs text-muted-foreground mt-1">
-              {t("ai.results.source", { defaultValue: "Source" })}: {providerLabel}
-              {recommendationMeta?.cacheHit ? ` · ${t("ai.results.cached", { defaultValue: "Cached" })}` : ""}
-              {recommendationMeta?.stale ? ` · ${t("ai.results.staleFallback", { defaultValue: "Stale fallback" })}` : ""}
-              {usingFallback ? ` · ${t("ai.results.demoMode", { defaultValue: "Demo mode" })}` : ""}
-            </p>
+            <p className="text-sm text-muted-foreground">5 crops analyzed · Ranked by suitability for your farm</p>
           </div>
           <div className="flex gap-2">
             <Button variant="outline" size="sm" onClick={() => setCompareMode(!compareMode)}>
-              <BarChart2 className="w-4 h-4 mr-1" /> {compareMode ? t("ai.results.exitCompare", { defaultValue: "Exit Compare" }) : t("ai.results.compare", { defaultValue: "Compare" })}
+              <BarChart2 className="w-4 h-4 mr-1" /> {compareMode ? "Exit Compare" : "Compare"}
             </Button>
             <Button variant="outline" size="sm" onClick={handleReset}>
-              <RefreshCcw className="w-4 h-4 mr-1" /> {t("ai.results.newAnalysis", { defaultValue: "New Analysis" })}
+              <RefreshCcw className="w-4 h-4 mr-1" /> New Analysis
             </Button>
           </div>
         </div>
@@ -624,8 +539,8 @@ export default function AIRecommendation() {
             <Award className="w-5 h-5 text-success" />
           </div>
           <div className="flex-1">
-            <p className="text-sm font-medium text-foreground">{t("ai.results.confidence", { defaultValue: "AI Confidence: 92% — Based on 12 data points" })}</p>
-            <p className="text-xs text-muted-foreground">{t("ai.results.confidenceHint", { defaultValue: "Weather data, market trends, soil analysis, and historical yields considered" })}</p>
+            <p className="text-sm font-medium text-foreground">AI Confidence: 92% — Based on 12 data points</p>
+            <p className="text-xs text-muted-foreground">Weather data, market trends, soil analysis, and historical yields considered</p>
           </div>
           <div className="hidden sm:flex gap-3 text-xs">
             <span className="flex items-center gap-1 text-muted-foreground"><Sun className="w-3.5 h-3.5" /> 28°C avg</span>
@@ -642,13 +557,13 @@ export default function AIRecommendation() {
             className="glass-card rounded-2xl p-5 mb-6 overflow-hidden"
           >
             <h3 className="font-heading font-semibold text-foreground mb-4 flex items-center gap-2">
-              <PieChart className="w-4 h-4 text-primary" /> {t("ai.results.comparisonView", { defaultValue: "Comparison View" })}
+              <PieChart className="w-4 h-4 text-primary" /> Comparison View
             </h3>
             <div className="overflow-x-auto">
               <table className="w-full text-sm">
                 <thead>
                   <tr className="border-b border-border">
-                    <th className="text-left py-2 pr-4 text-muted-foreground font-medium">{t("ai.results.metric", { defaultValue: "Metric" })}</th>
+                    <th className="text-left py-2 pr-4 text-muted-foreground font-medium">Metric</th>
                     {compareList.map((idx) => (
                       <th key={idx} className="text-left py-2 px-3 text-foreground font-medium">
                         {cropResults[idx].emoji} {cropResults[idx].name}
@@ -658,14 +573,14 @@ export default function AIRecommendation() {
                 </thead>
                 <tbody className="divide-y divide-border">
                   {[
-                    { label: t("ai.results.metrics.score", { defaultValue: "Score" }), key: "score", suffix: "%" },
-                    { label: t("ai.results.metrics.roi", { defaultValue: "ROI" }), key: "roi" },
-                    { label: t("ai.results.metrics.yield", { defaultValue: "Yield" }), key: "yield" },
-                    { label: t("ai.results.metrics.duration", { defaultValue: "Duration" }), key: "duration" },
-                    { label: t("ai.results.metrics.waterNeed", { defaultValue: "Water Need" }), key: "water" },
-                    { label: t("ai.results.metrics.investment", { defaultValue: "Investment" }), key: "investment" },
-                    { label: t("ai.results.metrics.revenue", { defaultValue: "Revenue" }), key: "revenue" },
-                    { label: t("ai.results.metrics.profit", { defaultValue: "Profit" }), key: "profit" },
+                    { label: "Score", key: "score", suffix: "%" },
+                    { label: "ROI", key: "roi" },
+                    { label: "Yield", key: "yield" },
+                    { label: "Duration", key: "duration" },
+                    { label: "Water Need", key: "water" },
+                    { label: "Investment", key: "investment" },
+                    { label: "Revenue", key: "revenue" },
+                    { label: "Profit", key: "profit" },
                   ].map((row) => (
                     <tr key={row.label}>
                       <td className="py-2 pr-4 text-muted-foreground">{row.label}</td>
@@ -682,9 +597,9 @@ export default function AIRecommendation() {
           </motion.div>
         )}
 
-        <div className="grid lg:grid-cols-12 gap-6">
+        <div className="grid lg:grid-cols-3 gap-6">
           {/* Left: Crop cards */}
-          <div className="lg:col-span-7 space-y-3">
+          <div className="lg:col-span-2 space-y-3">
             {cropResults.map((c, i) => (
               <motion.div
                 key={c.name}
@@ -716,7 +631,7 @@ export default function AIRecommendation() {
                       <span className="text-sm text-muted-foreground">{c.nameHi}</span>
                       {i === 0 && (
                         <span className="text-xs px-2 py-0.5 rounded-full gradient-warm text-secondary-foreground font-semibold flex items-center gap-1">
-                          <Star className="w-3 h-3" /> {t("ai.results.topPick", { defaultValue: "Top Pick" })}
+                          <Star className="w-3 h-3" /> Top Pick
                         </span>
                       )}
                     </div>
@@ -727,10 +642,10 @@ export default function AIRecommendation() {
                       ))}
                     </div>
                     <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-xs">
-                      <Stat icon={BarChart3} label={t("ai.results.metrics.yield", { defaultValue: "Yield" })} value={c.yield} />
-                      <Stat icon={IndianRupee} label={t("ai.results.metrics.price", { defaultValue: "Price" })} value={c.price} />
-                      <Stat icon={Timer} label={t("ai.results.metrics.duration", { defaultValue: "Duration" })} value={c.duration} />
-                      <Stat icon={TrendingUp} label={t("ai.results.metrics.roi", { defaultValue: "ROI" })} value={c.roi} accent />
+                      <Stat icon={BarChart3} label="Yield" value={c.yield} />
+                      <Stat icon={IndianRupee} label="Price" value={c.price} />
+                      <Stat icon={Timer} label="Duration" value={c.duration} />
+                      <Stat icon={TrendingUp} label="ROI" value={c.roi} accent />
                     </div>
                   </div>
                   <div className="shrink-0 hidden sm:block">
@@ -741,25 +656,25 @@ export default function AIRecommendation() {
             ))}
 
             {compareMode && (
-              <p className="text-xs text-center text-muted-foreground">{t("ai.results.selectCompare", { defaultValue: "Select 2-3 crops to compare side by side" })}</p>
+              <p className="text-xs text-center text-muted-foreground">Select 2-3 crops to compare side by side</p>
             )}
           </div>
 
           {/* Right: Detail panel */}
-          <div className="lg:col-span-5 space-y-4">
+          <div className="space-y-4">
             {/* Farm Profile */}
             <div className="glass-card rounded-2xl p-5">
               <h3 className="font-heading font-semibold text-foreground mb-3 flex items-center gap-2">
-                <MapPin className="w-4 h-4 text-primary" /> {t("ai.results.yourFarmProfile", { defaultValue: "Your Farm Profile" })}
+                <MapPin className="w-4 h-4 text-primary" /> Your Farm Profile
               </h3>
               <div className="space-y-2 text-sm">
-                <ProfileRow label={t("ai.profile.location", { defaultValue: "Location" })} value={form.autoDetect ? t("ai.profile.autoDetected", { defaultValue: "Auto-detected" }) : form.location} />
-                <ProfileRow label={t("ai.profile.soil", { defaultValue: "Soil" })} value={soilTypes.find((s) => s.id === form.soilType)?.label || "—"} />
-                <ProfileRow label={t("ai.profile.farmSize", { defaultValue: "Farm Size" })} value={`${form.farmSize} ${form.sizeUnit}`} />
-                <ProfileRow label={t("ai.profile.budget", { defaultValue: "Budget" })} value={`₹${form.budget.toLocaleString()}`} />
-                <ProfileRow label={t("ai.profile.water", { defaultValue: "Water" })} value={form.waterAvailability || "—"} />
-                <ProfileRow label={t("ai.profile.irrigation", { defaultValue: "Irrigation" })} value={form.irrigationType || "—"} />
-                <ProfileRow label={t("ai.profile.season", { defaultValue: "Season" })} value={form.season || "—"} />
+                <ProfileRow label="Location" value={form.autoDetect ? "Auto-detected" : form.location} />
+                <ProfileRow label="Soil" value={soilTypes.find((s) => s.id === form.soilType)?.label || "—"} />
+                <ProfileRow label="Farm Size" value={`${form.farmSize} ${form.sizeUnit}`} />
+                <ProfileRow label="Budget" value={`₹${form.budget.toLocaleString()}`} />
+                <ProfileRow label="Water" value={form.waterAvailability || "—"} />
+                <ProfileRow label="Irrigation" value={form.irrigationType || "—"} />
+                <ProfileRow label="Season" value={form.season || "—"} />
               </div>
             </div>
 
@@ -780,7 +695,7 @@ export default function AIRecommendation() {
                 <div className="flex items-center justify-between mb-6">
                   <h3 className="font-heading font-bold text-lg text-foreground flex items-center gap-3">
                     <span className="text-3xl">{crop.emoji}</span>
-                    {t("ai.results.deepDive", { defaultValue: "{{name}} — Deep Dive", name: crop.name })}
+                    {crop.name} — Deep Dive
                   </h3>
                   <div className="flex gap-2">
                     <Button
@@ -790,11 +705,11 @@ export default function AIRecommendation() {
                       onClick={() => {
                         const text = `${crop.name}\n${crop.desc}`;
                         navigator.clipboard.writeText(text);
-                        toast({ title: t("ai.toast.copied", { defaultValue: "Copied to clipboard!" }) });
+                        toast({ title: "Copied to clipboard!" });
                       }}
                     >
                       <Share2 className="w-4 h-4" />
-                      {t("ai.actions.share", { defaultValue: "Share" })}
+                      Share
                     </Button>
                     <Button
                       variant="outline"
@@ -808,27 +723,27 @@ export default function AIRecommendation() {
                         document.body.appendChild(element);
                         element.click();
                         document.body.removeChild(element);
-                        toast({ title: t("ai.toast.downloadStarted", { defaultValue: "Download started!" }) });
+                        toast({ title: "Download started!" });
                       }}
                     >
                       <Download className="w-4 h-4" />
-                      {t("ai.actions.download", { defaultValue: "Download" })}
+                      Download
                     </Button>
                   </div>
                 </div>
 
                 <Tabs defaultValue="overview" className="w-full">
                   <TabsList className="w-full mb-6 grid grid-cols-3 bg-muted/30 p-1 rounded-lg">
-                    <TabsTrigger value="overview" className="text-xs font-medium data-[state=active]:bg-primary/20 data-[state=active]:text-primary">{t("ai.tabs.overview", { defaultValue: "Overview" })}</TabsTrigger>
-                    <TabsTrigger value="timeline" className="text-xs font-medium data-[state=active]:bg-primary/20 data-[state=active]:text-primary">{t("ai.tabs.timeline", { defaultValue: "Timeline" })}</TabsTrigger>
-                    <TabsTrigger value="costs" className="text-xs font-medium data-[state=active]:bg-primary/20 data-[state=active]:text-primary">{t("ai.tabs.costs", { defaultValue: "Costs" })}</TabsTrigger>
+                    <TabsTrigger value="overview" className="text-xs font-medium data-[state=active]:bg-primary/20 data-[state=active]:text-primary">Overview</TabsTrigger>
+                    <TabsTrigger value="timeline" className="text-xs font-medium data-[state=active]:bg-primary/20 data-[state=active]:text-primary">Timeline</TabsTrigger>
+                    <TabsTrigger value="costs" className="text-xs font-medium data-[state=active]:bg-primary/20 data-[state=active]:text-primary">Costs</TabsTrigger>
                   </TabsList>
 
                   <TabsContent value="overview" className="space-y-3 text-sm text-muted-foreground">
-                    <DetailSection icon={CalendarDays} title={t("ai.sections.growthTimeline", { defaultValue: "Growth Timeline" })}>
-                      {t("ai.sections.growthTimelineDesc", { defaultValue: "{{duration}} from sowing to harvest. Best planted at the start of {{season}} season.", duration: crop.duration, season: form.season || "Rabi" })}
+                    <DetailSection icon={CalendarDays} title="Growth Timeline">
+                      {crop.duration} from sowing to harvest. Best planted at the start of {form.season || "Rabi"} season.
                     </DetailSection>
-                    <DetailSection icon={Bug} title={t("ai.sections.pestRisks", { defaultValue: "Pest Risks" })}>
+                    <DetailSection icon={Bug} title="Pest Risks">
                       <div className="space-y-1.5 mt-1">
                         {crop.pestRisks.map((p) => (
                           <div key={p.name} className="flex items-center justify-between text-xs p-2 rounded-lg bg-muted/30">
@@ -840,7 +755,7 @@ export default function AIRecommendation() {
                         ))}
                       </div>
                     </DetailSection>
-                    <DetailSection icon={Leaf} title={t("ai.sections.fertilizerSchedule", { defaultValue: "Fertilizer Schedule" })}>
+                    <DetailSection icon={Leaf} title="Fertilizer Schedule">
                       <div className="space-y-1.5 mt-1">
                         {crop.fertilizerPlan.map((f) => (
                           <div key={f.stage} className="text-xs p-2 rounded-lg bg-muted/30">
@@ -849,8 +764,8 @@ export default function AIRecommendation() {
                         ))}
                       </div>
                     </DetailSection>
-                    <DetailSection icon={CloudRain} title={t("ai.sections.waterNeeds", { defaultValue: "Water Needs" })}>
-                      {t("ai.sections.waterNeedsDesc", { defaultValue: "{{water}} water requirement. Critical irrigation at flowering and pod/fruit formation.", water: crop.water })}
+                    <DetailSection icon={CloudRain} title="Water Needs">
+                      {crop.water} water requirement. Critical irrigation at flowering and pod/fruit formation.
                     </DetailSection>
                   </TabsContent>
 
@@ -883,40 +798,40 @@ export default function AIRecommendation() {
                       <div className="flex justify-between items-center p-4 rounded-xl bg-gradient-to-r from-muted/30 to-muted/10 border border-primary/10 hover:border-primary/20 transition-colors">
                         <span className="text-sm font-medium text-muted-foreground flex items-center gap-2">
                           <IndianRupee className="w-4 h-4 text-primary" />
-                          {t("ai.results.metrics.investment", { defaultValue: "Investment" })}
+                          Investment
                         </span>
                         <span className="text-lg font-bold text-foreground">{crop.investment}</span>
                       </div>
                       <div className="flex justify-between items-center p-4 rounded-xl bg-gradient-to-r from-muted/30 to-muted/10 border border-primary/10 hover:border-primary/20 transition-colors">
                         <span className="text-sm font-medium text-muted-foreground flex items-center gap-2">
                           <TrendingUp className="w-4 h-4 text-accent" />
-                          {t("ai.results.metrics.revenue", { defaultValue: "Expected Revenue" })}
+                          Expected Revenue
                         </span>
                         <span className="text-lg font-bold text-foreground">{crop.revenue}</span>
                       </div>
                       <div className="flex justify-between items-center p-4 rounded-xl bg-gradient-to-r from-success/10 to-success/5 border border-success/20">
                         <span className="text-sm font-semibold text-success flex items-center gap-2">
                           <Check className="w-4 h-4" />
-                          {t("ai.results.metrics.profit", { defaultValue: "Net Profit" })}
+                          Net Profit
                         </span>
                         <span className="text-lg font-bold text-success">{crop.profit}</span>
                       </div>
                       <div className="flex justify-between items-center p-4 rounded-xl gradient-hero text-white border border-primary/30">
                         <span className="text-sm font-semibold flex items-center gap-2">
                           <BarChart3 className="w-4 h-4" />
-                          {t("ai.results.metrics.roi", { defaultValue: "ROI" })}
+                          ROI
                         </span>
                         <span className="text-xl font-bold">{crop.roi}</span>
                       </div>
                     </div>
-                    <p className="text-[11px] text-muted-foreground text-center italic">{t("ai.sections.estimateNote", { defaultValue: "*Estimates based on current MSP and market rates. Actual results may vary." })}</p>
+                    <p className="text-[11px] text-muted-foreground text-center italic">*Estimates based on current MSP and market rates. Actual results may vary.</p>
                   </TabsContent>
                 </Tabs>
 
                 <div className="flex gap-2 mt-6 pt-4 border-t border-primary/10">
                   <Button className="flex-1 gradient-warm text-white border-0 hover:opacity-90 font-medium gap-2" size="sm">
                     <ShoppingCart className="w-4 h-4" />
-                    {t("ai.actions.buySeeds", { defaultValue: "Buy Seeds" })}
+                    Buy Seeds
                   </Button>
                 </div>
               </div>
@@ -929,151 +844,121 @@ export default function AIRecommendation() {
 
   // ── Wizard ──
   return (
-    <div className="min-h-[calc(100vh-120px)] flex flex-col items-center justify-start py-8 px-4">
-      <div className="w-full max-w-4xl">
-        {/* Header */}
-        <motion.div
-          initial={{ opacity: 0, y: -20 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="text-center mb-10"
-        >
-          <div className="flex items-center justify-center gap-3 mb-3">
-            <div className="w-12 h-12 rounded-xl gradient-hero flex items-center justify-center">
-              <Sparkles className="w-6 h-6 text-accent" />
-            </div>
+    <>
+      <div className="mb-8">
+        <div className="flex items-center gap-3 mb-2">
+          <div className="w-10 h-10 rounded-xl gradient-hero flex items-center justify-center">
+            <Sparkles className="w-5 h-5 text-accent" />
           </div>
-          <h1 className="text-3xl md:text-4xl font-heading font-bold text-foreground mb-2">{t("ai.wizard.title", { defaultValue: "AI Crop Recommendation" })}</h1>
-          <p className="text-base text-muted-foreground max-w-2xl mx-auto">{t("ai.wizard.subtitle", { defaultValue: "Tell us about your farm — our AI will find the best crops for you." })}</p>
-        </motion.div>
-
-        {/* Stepper - Responsive */}
-        <motion.div
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          transition={{ delay: 0.1 }}
-          className="mb-10"
-        >
-          <div className="flex items-center justify-center gap-3 overflow-x-auto pb-2">
-            {steps.map((step, i) => (
-              <div key={step.label} className="flex items-center gap-3 shrink-0">
-                <motion.button
-                  whileHover={{ scale: 1.05 }}
-                  whileTap={{ scale: 0.95 }}
-                  onClick={() => i < currentStep && setCurrentStep(i)}
-                  className={`flex items-center gap-2 px-4 py-2.5 rounded-full text-sm font-medium transition-all whitespace-nowrap ${
-                    i === currentStep
-                      ? "gradient-hero text-primary-foreground shadow-lg"
-                      : i < currentStep
-                      ? "bg-success/15 text-success hover:bg-success/25"
-                      : "bg-muted text-muted-foreground hover:bg-muted/80"
-                  }`}
-                >
-                  {i < currentStep ? <Check className="w-4 h-4" /> : <step.icon className="w-4 h-4" />}
-                  <span className="hidden sm:inline">{stepText[i].label}</span>
-                </motion.button>
-                {i < steps.length - 1 && <ChevronRight className="w-4 h-4 text-muted-foreground shrink-0 hidden sm:block" />}
-              </div>
-            ))}
+          <div>
+            <h1 className="text-2xl font-heading font-bold text-foreground">AI Crop Recommendation</h1>
+            <p className="text-sm text-muted-foreground">Tell us about your farm — our AI will find the best crops for you.</p>
           </div>
-        </motion.div>
-
-        {/* Step content */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.3 }}
-          className="glass-card rounded-3xl p-6 sm:p-8 lg:p-10 w-full"
-        >
-          <div className="flex items-center justify-between mb-1">
-            <h2 className="text-lg font-heading font-semibold text-foreground">{stepText[currentStep].title}</h2>
-            <span className="text-xs px-2 py-1 rounded-full bg-muted text-muted-foreground">{t("ai.wizard.step", { defaultValue: "Step {{current}}/4", current: currentStep + 1 })}</span>
-          </div>
-          <p className="text-sm text-muted-foreground mb-6">{stepText[currentStep].subtitle}</p>
-
-          <AnimatePresence mode="wait">
-            <motion.div
-              key={currentStep}
-              initial={{ opacity: 0, x: 20 }}
-              animate={{ opacity: 1, x: 0 }}
-              exit={{ opacity: 0, x: -20 }}
-              transition={{ duration: 0.25 }}
-            >
-              {currentStep === 0 && (
-                <StepLocation
-                  form={form}
-                  update={update}
-                  detectingLocation={detectingLocation}
-                  onAutoDetectToggle={handleAutoDetectToggle}
-                />
-              )}
-              {currentStep === 1 && <StepSoil form={form} update={update} />}
-              {currentStep === 2 && <StepResources form={form} update={update} />}
-              {currentStep === 3 && <StepPreferences form={form} update={update} />}
-            </motion.div>
-          </AnimatePresence>
-
-          {/* Navigation */}
-          <div className="flex items-center justify-between mt-8 pt-6 border-t border-border gap-4">
-            <Button
-              variant="ghost"
-              onClick={() => setCurrentStep((s) => s - 1)}
-              disabled={currentStep === 0}
-              className="gap-2"
-            >
-              <ChevronLeft className="w-4 h-4" /> <span className="hidden sm:inline">{t("ai.actions.back", { defaultValue: "Back" })}</span>
-            </Button>
-            {currentStep < 3 ? (
-              <Button
-                onClick={() => setCurrentStep((s) => s + 1)}
-                disabled={!canProceed()}
-                className="gradient-hero text-primary-foreground border-0 hover:opacity-90 gap-2 flex-1 sm:flex-none"
-              >
-                {t("ai.actions.continue", { defaultValue: "Continue" })} <ChevronRight className="w-4 h-4" />
-              </Button>
-            ) : (
-              <Button
-                onClick={handleAnalyze}
-                disabled={!canProceed()}
-                className="gradient-warm text-secondary-foreground border-0 hover:opacity-90 gap-2 flex-1 sm:flex-none font-semibold"
-              >
-                <Sparkles className="w-4 h-4" /> {t("ai.actions.getRecommendations", { defaultValue: "Get AI Recommendations" })}
-              </Button>
-            )}
-          </div>
-        </motion.div>
-
-        {/* Tips section */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.2 }}
-          className="mt-8"
-        >
-          <p className="text-xs text-muted-foreground text-center mb-4 font-medium">{t("ai.tips.0.title", { defaultValue: "TIPS & BEST PRACTICES" })}</p>
-          <div className="grid sm:grid-cols-3 gap-4">
-            {[
-              { icon: Zap, title: "Quick Tip", desc: "Auto-detect location for weather-adjusted results" },
-              { icon: ThumbsUp, title: "Best Practice", desc: "Choose accurate soil type and water availability for better recommendations" },
-              { icon: Leaf, title: "Pro Tip", desc: "Try multiple seasons to compare year-round options" },
-            ].map((tip, i) => (
-              <motion.div
-                key={tip.title}
-                whileHover={{ y: -4 }}
-                className="glass-card rounded-2xl p-4 flex items-start gap-4 border border-primary/5 hover:border-primary/20 transition-all"
-              >
-                <div className="w-10 h-10 rounded-lg gradient-hero flex items-center justify-center shrink-0 text-white">
-                  <tip.icon className="w-5 h-5" />
-                </div>
-                <div className="flex-1">
-                  <p className="text-sm font-semibold text-foreground mb-1">{t(`ai.tips.${i}.title`, { defaultValue: tip.title })}</p>
-                  <p className="text-xs text-muted-foreground leading-relaxed">{t(`ai.tips.${i}.desc`, { defaultValue: tip.desc })}</p>
-                </div>
-              </motion.div>
-            ))}
-          </div>
-        </motion.div>
+        </div>
       </div>
-    </div>
+
+      {/* Stepper */}
+      <div className="flex items-center gap-2 mb-8 overflow-x-auto pb-2">
+        {steps.map((step, i) => (
+          <div key={step.label} className="flex items-center gap-2 shrink-0">
+            <button
+              onClick={() => i < currentStep && setCurrentStep(i)}
+              className={`flex items-center gap-2 px-4 py-2.5 rounded-full text-sm font-medium transition-all ${
+                i === currentStep
+                  ? "gradient-hero text-primary-foreground shadow-md"
+                  : i < currentStep
+                  ? "bg-success/15 text-success"
+                  : "bg-muted text-muted-foreground"
+              }`}
+            >
+              {i < currentStep ? <Check className="w-4 h-4" /> : <step.icon className="w-4 h-4" />}
+              <span className="hidden sm:inline">{step.label}</span>
+            </button>
+            {i < steps.length - 1 && <ChevronRight className="w-4 h-4 text-muted-foreground shrink-0" />}
+          </div>
+        ))}
+      </div>
+
+      {/* Step content */}
+      <div className="glass-card rounded-2xl p-6 md:p-8 max-w-3xl">
+        <div className="flex items-center justify-between mb-1">
+          <h2 className="text-lg font-heading font-semibold text-foreground">{steps[currentStep].title}</h2>
+          <span className="text-xs px-2 py-1 rounded-full bg-muted text-muted-foreground">Step {currentStep + 1}/4</span>
+        </div>
+        <p className="text-sm text-muted-foreground mb-6">{steps[currentStep].subtitle}</p>
+
+        <AnimatePresence mode="wait">
+          <motion.div
+            key={currentStep}
+            initial={{ opacity: 0, x: 20 }}
+            animate={{ opacity: 1, x: 0 }}
+            exit={{ opacity: 0, x: -20 }}
+            transition={{ duration: 0.25 }}
+          >
+            {currentStep === 0 && (
+              <StepLocation
+                form={form}
+                update={update}
+                detectingLocation={detectingLocation}
+                onAutoDetectToggle={handleAutoDetectToggle}
+              />
+            )}
+            {currentStep === 1 && <StepSoil form={form} update={update} />}
+            {currentStep === 2 && <StepResources form={form} update={update} />}
+            {currentStep === 3 && <StepPreferences form={form} update={update} />}
+          </motion.div>
+        </AnimatePresence>
+
+        {/* Navigation */}
+        <div className="flex items-center justify-between mt-8 pt-6 border-t border-border">
+          <Button
+            variant="ghost"
+            onClick={() => setCurrentStep((s) => s - 1)}
+            disabled={currentStep === 0}
+          >
+            <ChevronLeft className="w-4 h-4 mr-1" /> Back
+          </Button>
+          {currentStep < 3 ? (
+            <Button
+              onClick={() => setCurrentStep((s) => s + 1)}
+              disabled={!canProceed()}
+              className="gradient-hero text-primary-foreground border-0 hover:opacity-90"
+            >
+              Continue <ChevronRight className="w-4 h-4 ml-1" />
+            </Button>
+          ) : (
+            <Button
+              onClick={handleAnalyze}
+              disabled={!canProceed()}
+              className="gradient-warm text-secondary-foreground border-0 hover:opacity-90"
+            >
+              <Sparkles className="w-4 h-4 mr-2" /> Get AI Recommendations
+            </Button>
+          )}
+        </div>
+      </div>
+
+      {/* Tips section */}
+      <div className="mt-6 max-w-3xl">
+        <div className="grid sm:grid-cols-3 gap-3">
+          {[
+            { icon: Zap, title: "Quick Tip", desc: "Auto-detect location for weather-adjusted results" },
+            { icon: ThumbsUp, title: "Best Practice", desc: "Choose accurate soil type and water availability for better recommendations" },
+            { icon: Leaf, title: "Pro Tip", desc: "Try multiple seasons to compare year-round options" },
+          ].map((tip) => (
+            <div key={tip.title} className="glass-card rounded-xl p-3 flex items-start gap-3">
+              <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center shrink-0">
+                <tip.icon className="w-4 h-4 text-primary" />
+              </div>
+              <div>
+                <p className="text-xs font-medium text-foreground">{tip.title}</p>
+                <p className="text-[11px] text-muted-foreground">{tip.desc}</p>
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+    </>
   );
 }
 
@@ -1090,8 +975,6 @@ function StepLocation({
   detectingLocation: boolean;
   onAutoDetectToggle: () => void;
 }) {
-  const { t } = useTranslation();
-
   return (
     <div className="space-y-5">
       <button
@@ -1105,23 +988,21 @@ function StepLocation({
           <Locate className={`w-5 h-5 ${form.autoDetect ? "text-primary" : "text-muted-foreground"} ${detectingLocation ? "animate-pulse" : ""}`} />
         </div>
         <div className="text-left">
-          <p className="font-medium text-sm text-foreground">{t("ai.location.autoDetect", { defaultValue: "Auto-detect my location" })}</p>
+          <p className="font-medium text-sm text-foreground">Auto-detect my location</p>
           <p className="text-xs text-muted-foreground">
-            {detectingLocation
-              ? t("ai.location.detecting", { defaultValue: "Detecting your location..." })
-              : t("ai.location.autoDetectHint", { defaultValue: "Use GPS to automatically find your farm location" })}
+            {detectingLocation ? "Detecting your location..." : "Use GPS to automatically find your farm location"}
           </p>
         </div>
         {form.autoDetect && !detectingLocation && <Check className="w-5 h-5 text-primary ml-auto" />}
       </button>
 
       <div className="relative">
-        <label className="text-sm font-medium text-foreground mb-1.5 block">{t("ai.location.manualLabel", { defaultValue: "Or enter location manually" })}</label>
+        <label className="text-sm font-medium text-foreground mb-1.5 block">Or enter location manually</label>
         <div className="relative">
           <MapPin className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
           <input
             type="text"
-            placeholder={t("ai.location.placeholder", { defaultValue: "e.g., Indore, Madhya Pradesh" })}
+            placeholder="e.g., Indore, Madhya Pradesh"
             value={form.location}
             onChange={(e) => update("location", e.target.value)}
             maxLength={200}
@@ -1134,12 +1015,10 @@ function StepLocation({
 }
 
 function StepSoil({ form, update }: { form: FormData; update: <K extends keyof FormData>(k: K, v: FormData[K]) => void }) {
-  const { t } = useTranslation();
-
   return (
     <div className="space-y-6">
       <div>
-        <label className="text-sm font-medium text-foreground mb-3 block">{t("ai.soil.label", { defaultValue: "Soil Type" })}</label>
+        <label className="text-sm font-medium text-foreground mb-3 block">Soil Type</label>
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
           {soilTypes.map((soil) => (
             <button
@@ -1150,8 +1029,8 @@ function StepSoil({ form, update }: { form: FormData; update: <K extends keyof F
               }`}
             >
               <span className="text-2xl">{soil.emoji}</span>
-              <span className="text-xs font-medium text-foreground">{t(`ai.soil.options.${soil.id}.label`, { defaultValue: soil.label })}</span>
-              <span className="text-[10px] text-muted-foreground">{t(`ai.soil.options.${soil.id}.desc`, { defaultValue: soil.desc })}</span>
+              <span className="text-xs font-medium text-foreground">{soil.label}</span>
+              <span className="text-[10px] text-muted-foreground">{soil.desc}</span>
             </button>
           ))}
         </div>
@@ -1161,13 +1040,11 @@ function StepSoil({ form, update }: { form: FormData; update: <K extends keyof F
 }
 
 function StepResources({ form, update }: { form: FormData; update: <K extends keyof FormData>(k: K, v: FormData[K]) => void }) {
-  const { t } = useTranslation();
-
   return (
     <div className="space-y-6">
       <div className="grid sm:grid-cols-2 gap-4">
         <div>
-          <label className="text-sm font-medium text-foreground mb-1.5 block">{t("ai.resources.farmSize", { defaultValue: "Farm Size" })}</label>
+          <label className="text-sm font-medium text-foreground mb-1.5 block">Farm Size</label>
           <div className="flex gap-2">
             <input
               type="number"
@@ -1186,14 +1063,14 @@ function StepResources({ form, update }: { form: FormData; update: <K extends ke
                     form.sizeUnit === u ? "bg-primary text-primary-foreground" : "bg-background text-muted-foreground hover:bg-muted"
                   }`}
                 >
-                  {t(`ai.resources.units.${u}`, { defaultValue: u })}
+                  {u}
                 </button>
               ))}
             </div>
           </div>
         </div>
         <SliderField
-          label={t("ai.resources.budget", { defaultValue: "Budget" })}
+          label="Budget"
           value={form.budget}
           onChange={(v) => update("budget", v)}
           min={5000} max={500000} step={5000}
@@ -1202,7 +1079,7 @@ function StepResources({ form, update }: { form: FormData; update: <K extends ke
       </div>
 
       <div>
-        <label className="text-sm font-medium text-foreground mb-3 block">{t("ai.resources.waterAvailability", { defaultValue: "Water Availability" })}</label>
+        <label className="text-sm font-medium text-foreground mb-3 block">Water Availability</label>
         <div className="grid sm:grid-cols-3 gap-3">
           {waterOptions.map((opt) => (
             <button
@@ -1213,27 +1090,27 @@ function StepResources({ form, update }: { form: FormData; update: <K extends ke
               }`}
             >
               <span className="text-xl">{opt.icon}</span>
-              <span className="text-sm font-medium text-foreground">{t(`ai.resources.water.${opt.id}.label`, { defaultValue: opt.label })}</span>
-              <span className="text-xs text-muted-foreground text-center">{t(`ai.resources.water.${opt.id}.desc`, { defaultValue: opt.desc })}</span>
+              <span className="text-sm font-medium text-foreground">{opt.label}</span>
+              <span className="text-xs text-muted-foreground text-center">{opt.desc}</span>
             </button>
           ))}
         </div>
       </div>
 
       <div>
-        <label className="text-sm font-medium text-foreground mb-3 block">{t("ai.resources.irrigationType", { defaultValue: "Irrigation Type" })}</label>
+        <label className="text-sm font-medium text-foreground mb-3 block">Irrigation Type</label>
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-          {irrigationTypes.map((irrigation) => (
+          {irrigationTypes.map((t) => (
             <button
-              key={irrigation.id}
-              onClick={() => update("irrigationType", irrigation.id)}
+              key={t.id}
+              onClick={() => update("irrigationType", t.id)}
               className={`flex flex-col items-center gap-1 p-3 rounded-xl border-2 transition-all ${
-                form.irrigationType === irrigation.id ? "border-primary bg-primary/5" : "border-border hover:border-primary/30"
+                form.irrigationType === t.id ? "border-primary bg-primary/5" : "border-border hover:border-primary/30"
               }`}
             >
-              <span className="text-2xl">{irrigation.emoji}</span>
-              <span className="text-xs font-medium text-foreground">{t(`ai.resources.irrigation.${irrigation.id}.label`, { defaultValue: irrigation.label })}</span>
-              <span className="text-[10px] text-muted-foreground">{t(`ai.resources.irrigation.${irrigation.id}.desc`, { defaultValue: irrigation.desc })}</span>
+              <span className="text-2xl">{t.emoji}</span>
+              <span className="text-xs font-medium text-foreground">{t.label}</span>
+              <span className="text-[10px] text-muted-foreground">{t.desc}</span>
             </button>
           ))}
         </div>
@@ -1243,12 +1120,10 @@ function StepResources({ form, update }: { form: FormData; update: <K extends ke
 }
 
 function StepPreferences({ form, update }: { form: FormData; update: <K extends keyof FormData>(k: K, v: FormData[K]) => void }) {
-  const { t } = useTranslation();
-
   return (
     <div className="space-y-6">
       <div>
-        <label className="text-sm font-medium text-foreground mb-3 block">{t("ai.preferences.season", { defaultValue: "Season" })}</label>
+        <label className="text-sm font-medium text-foreground mb-3 block">Season</label>
         <div className="grid sm:grid-cols-3 gap-3">
           {seasons.map((s) => (
             <button
@@ -1259,15 +1134,15 @@ function StepPreferences({ form, update }: { form: FormData; update: <K extends 
               }`}
             >
               <span className="text-2xl">{s.emoji}</span>
-              <span className="text-sm font-medium text-foreground">{t(`ai.preferences.seasons.${s.id}.label`, { defaultValue: s.label })}</span>
-              <span className="text-xs text-muted-foreground">{t(`ai.preferences.seasons.${s.id}.desc`, { defaultValue: s.desc })}</span>
+              <span className="text-sm font-medium text-foreground">{s.label}</span>
+              <span className="text-xs text-muted-foreground">{s.desc}</span>
             </button>
           ))}
         </div>
       </div>
 
       <div>
-        <label className="text-sm font-medium text-foreground mb-3 block">{t("ai.preferences.cropPurpose", { defaultValue: "Crop Purpose" })}</label>
+        <label className="text-sm font-medium text-foreground mb-3 block">Crop Purpose</label>
         <div className="grid grid-cols-3 gap-3">
           {[
             { id: "commercial", label: "Commercial", emoji: "💰", desc: "Market selling" },
@@ -1282,25 +1157,19 @@ function StepPreferences({ form, update }: { form: FormData; update: <K extends 
               }`}
             >
               <span className="text-xl">{p.emoji}</span>
-              <span className="text-xs font-medium text-foreground">{t(`ai.preferences.purpose.${p.id}.label`, { defaultValue: p.label })}</span>
-              <span className="text-[10px] text-muted-foreground">{t(`ai.preferences.purpose.${p.id}.desc`, { defaultValue: p.desc })}</span>
+              <span className="text-xs font-medium text-foreground">{p.label}</span>
+              <span className="text-[10px] text-muted-foreground">{p.desc}</span>
             </button>
           ))}
         </div>
       </div>
 
       <SliderField
-        label={t("ai.preferences.riskAppetite", { defaultValue: "Risk Appetite" })}
+        label="Risk Appetite"
         value={form.riskAppetite}
         onChange={(v) => update("riskAppetite", v)}
         min={0} max={100}
-        format={(v) =>
-          v <= 30
-            ? t("ai.preferences.risk.low", { defaultValue: "🛡️ Low — Safe, stable returns" })
-            : v <= 70
-            ? t("ai.preferences.risk.medium", { defaultValue: "⚖️ Medium — Balanced risk/reward" })
-            : t("ai.preferences.risk.high", { defaultValue: "🚀 High — Maximum profit potential" })
-        }
+        format={(v) => v <= 30 ? "🛡️ Low — Safe, stable returns" : v <= 70 ? "⚖️ Medium — Balanced risk/reward" : "🚀 High — Maximum profit potential"}
       />
     </div>
   );

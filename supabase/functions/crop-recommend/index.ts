@@ -26,10 +26,6 @@ type FarmData = {
   purpose?: string;
 };
 
-type RecommendationOptions = {
-  strictGemini?: boolean;
-};
-
 type CropRecommendation = {
   crop_name: string;
   suitability_reason: string;
@@ -41,7 +37,7 @@ type CropRecommendation = {
 };
 
 const CACHE_TTL_HOURS = Number(Deno.env.get("CROP_RECOMMEND_CACHE_TTL_HOURS") || "24");
-const CACHE_KEY_VERSION = "v3";
+const CACHE_KEY_VERSION = "v2";
 
 type CropProfile = {
   estimated_cost: number;
@@ -97,30 +93,6 @@ const normalizeDifficulty = (value: unknown): "easy" | "medium" | "hard" => {
   return "medium";
 };
 
-const normalizeWaterAvailabilityInput = (value: unknown): "low" | "medium" | "high" => {
-  const v = cleanText(value, "medium").toLowerCase();
-
-  if (
-    v.includes("high") ||
-    v.includes("abundant") ||
-    v.includes("plenty") ||
-    v.includes("ample")
-  ) {
-    return "high";
-  }
-
-  if (
-    v.includes("low") ||
-    v.includes("limited") ||
-    v.includes("scarce") ||
-    v.includes("less")
-  ) {
-    return "low";
-  }
-
-  return "medium";
-};
-
 const normalizeCrop = (item: Record<string, unknown>): CropRecommendation => {
   const durationRaw = cleanText(item.growth_duration, "120 days");
   const duration = durationRaw.toLowerCase().includes("day")
@@ -144,14 +116,8 @@ const buildCacheKey = (farmData: FarmData) => {
     .replace(/\s+/g, " ")
     .replace(/[^a-z0-9,\s-]/g, "");
   const soilType = cleanText(farmData.soilType, "unknown").toLowerCase();
-  const waterAvailability = normalizeWaterAvailabilityInput(farmData.waterAvailability);
-  const irrigationType = cleanText(farmData.irrigationType, "unknown").toLowerCase();
-  const season = cleanText(farmData.season, "any").toLowerCase();
-  const purpose = cleanText(farmData.purpose, "commercial").toLowerCase();
-  const farmSize = Math.max(0, Math.round(cleanNumber(farmData.farmSize, 0) * 10));
-  const sizeUnit = cleanText(farmData.sizeUnit, "acres").toLowerCase();
   const budget = Math.max(0, Math.round(cleanNumber(farmData.budget, 0)));
-  return `${CACHE_KEY_VERSION}|${location}|${soilType}|${waterAvailability}|${irrigationType}|${season}|${purpose}|${farmSize}|${sizeUnit}|${budget}`;
+  return `${CACHE_KEY_VERSION}|${location}|${soilType}|${budget}`;
 };
 
 const getCacheConfig = () => {
@@ -172,9 +138,7 @@ const isRecoverableAiError = (error: unknown) => {
     isRateLimitError(error) ||
     message.includes("temporarily unavailable") ||
     message.includes("timeout") ||
-    message.includes("invalid response") ||
-    message.includes("not configured") ||
-    message.includes("api key")
+    message.includes("invalid response")
   );
 };
 
@@ -276,7 +240,7 @@ const DEFAULT_CROPS = [
 
 const buildRuleBasedRecommendations = (farmData: FarmData): CropRecommendation[] => {
   const soil = cleanText(farmData.soilType, "loamy").toLowerCase();
-  const water = normalizeWaterAvailabilityInput(farmData.waterAvailability);
+  const water = cleanText(farmData.waterAvailability, "medium").toLowerCase();
   const season = cleanText(farmData.season, "kharif").toLowerCase();
   const purpose = cleanText(farmData.purpose, "commercial").toLowerCase();
   const budget = Math.max(0, cleanNumber(farmData.budget, 0));
@@ -324,7 +288,7 @@ const scoreCrop = (crop: CropRecommendation, farmData: FarmData): CropScoredItem
   let score = 50;
 
   const soil = cleanText(farmData.soilType, "loamy").toLowerCase();
-  const water = normalizeWaterAvailabilityInput(farmData.waterAvailability);
+  const water = cleanText(farmData.waterAvailability, "medium").toLowerCase();
   const season = cleanText(farmData.season, "kharif").toLowerCase();
   const budget = Math.max(0, cleanNumber(farmData.budget, 0));
 
@@ -339,7 +303,7 @@ const scoreCrop = (crop: CropRecommendation, farmData: FarmData): CropScoredItem
   }
 
   const cropWaterReq = crop.water_requirement.toLowerCase();
-  const normalizedWater = water;
+  const normalizedWater = water.includes("high") ? "high" : water.includes("low") ? "low" : "medium";
   if (cropWaterReq === normalizedWater) {
     score += 10;
   } else if (
@@ -386,24 +350,6 @@ const deduplicateAndSort = (crops: CropRecommendation[], farmData: FarmData): Cr
     .sort((a, b) => b.qualityScore - a.qualityScore)
     .slice(0, 5)
     .map(({ qualityScore, ...rest }) => rest);
-};
-
-const ensureMinimumRecommendations = (crops: CropRecommendation[], farmData: FarmData): CropRecommendation[] => {
-  const primary = deduplicateAndSort(crops, farmData);
-  if (primary.length >= 5) {
-    return primary.slice(0, 5);
-  }
-
-  const ruleBased = buildRuleBasedRecommendations(farmData);
-  return deduplicateAndSort([...primary, ...ruleBased], farmData).slice(0, 5);
-};
-
-const enforceStrictGeminiRecommendations = (crops: CropRecommendation[], farmData: FarmData): CropRecommendation[] => {
-  const primary = deduplicateAndSort(crops, farmData);
-  if (primary.length < 5) {
-    throw new Error("Gemini returned less than 5 unique crops. Please retry.");
-  }
-  return primary.slice(0, 5);
 };
 
 const saveCachedRecommendations = async (
@@ -457,8 +403,6 @@ Instructions:
 2. Recommend exactly 5 crops best suited for the conditions.
 3. Consider soil compatibility, climate, water availability, and budget.
 4. Ensure recommendations are practical for Indian farming conditions.
-5. Do not use a fixed/template list. Recommendations must change when location, soil type, water availability, or season changes.
-6. Avoid returning the same common vegetable set by default unless explicitly justified by the provided inputs.
 
 For each crop, provide:
 - crop_name
@@ -520,12 +464,7 @@ const invokeGemini = async (farmData: FarmData): Promise<CropRecommendation[]> =
   }
 
   const cleaned = textOutput.replace(/```json|```/g, "").trim();
-  let parsed: unknown;
-  try {
-    parsed = JSON.parse(cleaned);
-  } catch {
-    throw new Error("Invalid response from AI");
-  }
+  const parsed = JSON.parse(cleaned);
 
   if (!Array.isArray(parsed) || parsed.length === 0) {
     throw new Error("AI returned invalid crop list");
@@ -585,16 +524,8 @@ const invokeGroq = async (farmData: FarmData): Promise<CropRecommendation[]> => 
   }
 
   const cleaned = content.replace(/```json|```/g, "").trim();
-  let parsed: unknown;
-  try {
-    parsed = JSON.parse(cleaned);
-  } catch {
-    throw new Error("Invalid response from AI");
-  }
-  const parsedObject = typeof parsed === "object" && parsed !== null
-    ? (parsed as { crops?: unknown })
-    : null;
-  const list = Array.isArray(parsed) ? parsed : parsedObject?.crops;
+  const parsed = JSON.parse(cleaned);
+  const list = Array.isArray(parsed) ? parsed : parsed?.crops;
 
   if (!Array.isArray(list) || list.length === 0) {
     throw new Error("AI returned invalid crop list");
@@ -615,84 +546,30 @@ Deno.serve(async (req: Request) => {
   }
 
   try {
-    const { farmData, options } = await req.json() as { farmData?: FarmData; options?: RecommendationOptions };
-    const strictGemini = Boolean(options?.strictGemini);
+    const { farmData } = await req.json();
     const normalizedFarmData: FarmData = {
       location: cleanText(farmData?.location, ""),
       soilType: cleanText(farmData?.soilType, ""),
       farmSize: cleanNumber(farmData?.farmSize, 0),
       sizeUnit: cleanText(farmData?.sizeUnit, "acres"),
       budget: cleanNumber(farmData?.budget, 0),
-      waterAvailability: normalizeWaterAvailabilityInput(farmData?.waterAvailability),
+      waterAvailability: cleanText(farmData?.waterAvailability, ""),
       irrigationType: cleanText(farmData?.irrigationType, ""),
       season: cleanText(farmData?.season, ""),
       purpose: cleanText(farmData?.purpose, "commercial"),
     };
 
-    const cacheKey = buildCacheKey(normalizedFarmData);
-
-    if (strictGemini) {
-      const geminiCrops = await invokeGemini(normalizedFarmData);
-      const strictSorted = enforceStrictGeminiRecommendations(geminiCrops, normalizedFarmData);
-      await saveCachedRecommendations(cacheKey, normalizedFarmData, strictSorted);
-      return new Response(
-        JSON.stringify({ crops: strictSorted, cacheHit: false, provider: "gemini", strictGemini: true }),
-        { headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
-    }
-
-    const cached = await getCachedRecommendations(cacheKey);
-    if (cached && cached.length === 5) {
-      const dedupedCached = ensureMinimumRecommendations(cached, normalizedFarmData);
-      return new Response(
-        JSON.stringify({ crops: dedupedCached, cacheHit: true, provider: "cache" }),
-        { headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
-    }
-
-    const staleCached = await getCachedRecommendations(cacheKey, { includeExpired: true });
-
-    let crops: CropRecommendation[] = [];
-    let provider = "gemini";
-
-    try {
-      crops = await invokeGemini(normalizedFarmData);
-    } catch (geminiError) {
-      console.warn("Gemini primary provider failed:", geminiError);
-
-      if (!isRecoverableAiError(geminiError)) {
-        throw geminiError;
-      }
-
-      if (staleCached && staleCached.length === 5) {
-        const dedupedStale = ensureMinimumRecommendations(staleCached, normalizedFarmData);
-        return new Response(
-          JSON.stringify({
-            crops: dedupedStale,
-            cacheHit: true,
-            stale: true,
-            provider: "cache-stale",
-            fallbackReason: "primary-ai-unavailable",
-          }),
-          { headers: { ...corsHeaders, "Content-Type": "application/json" } }
-        );
-      }
-
-      try {
-        crops = await invokeGroq(normalizedFarmData);
-        provider = "groq";
-      } catch (groqError) {
-        console.warn("Groq backup provider failed, switching to rule fallback:", groqError);
-        crops = buildRuleBasedRecommendations(normalizedFarmData);
-        provider = "rule-fallback";
-      }
-    }
-
-    const sortedCrops = ensureMinimumRecommendations(crops, normalizedFarmData);
-    await saveCachedRecommendations(cacheKey, normalizedFarmData, sortedCrops);
+    const crops = buildRuleBasedRecommendations(normalizedFarmData);
+    const sortedCrops = deduplicateAndSort(crops, normalizedFarmData);
 
     return new Response(
-      JSON.stringify({ crops: sortedCrops, cacheHit: false, provider }),
+      JSON.stringify({
+        crops: sortedCrops,
+        cacheHit: false,
+        stale: false,
+        provider: "rule-fallback",
+        fallbackReason: "demo-mode",
+      }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
 
